@@ -12,9 +12,10 @@ import (
 )
 
 type FrontMatter struct {
-	Title  string `yaml:"title"`
-	Author string `yaml:"author"`
-	Date   string `yaml:"date"`
+	Title  string   `yaml:"title"`
+	Author string   `yaml:"author"`
+	Date   string   `yaml:"date"`
+	Tags   []string `yaml:"tags"`
 }
 
 type Post struct {
