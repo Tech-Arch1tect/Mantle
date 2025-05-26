@@ -8,10 +8,12 @@ import (
 
 type AppConfig struct {
 	ContentDir string `env:"CONTENT_DIR" validate:"required"`
+	OutputDir  string `env:"OUTPUT_DIR" validate:"required"`
 }
 
 func (c *AppConfig) SetDefaults() {
 	c.ContentDir = "./content"
+	c.OutputDir = "./output"
 }
 
 func loadConfig() (AppConfig, error) {

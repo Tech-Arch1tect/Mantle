@@ -23,4 +23,8 @@ func main() {
 	}
 
 	fmt.Printf("Loaded %d post(s)\n", len(posts))
+
+	processedPosts := processPosts(posts)
+
+	processOutput(cfg, processedPosts)
 }
