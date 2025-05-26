@@ -19,6 +19,7 @@ type FrontMatter struct {
 }
 
 type Post struct {
+	Index       int         `json:"index"`
 	Markdown    string      `json:"markdown"`
 	FrontMatter FrontMatter `json:"frontmatter"`
 }
@@ -31,6 +32,7 @@ func loadPosts(contentDir string) ([]Post, error) {
 		return nil, err
 	}
 
+	index := 0
 	for _, file := range files {
 		if file.IsDir() {
 			continue
@@ -52,9 +54,12 @@ func loadPosts(contentDir string) ([]Post, error) {
 		}
 
 		posts = append(posts, Post{
+			Index:       index,
 			Markdown:    body,
 			FrontMatter: fm,
 		})
+
+		index++
 	}
 
 	return posts, nil
