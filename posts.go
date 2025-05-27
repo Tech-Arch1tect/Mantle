@@ -24,49 +24,75 @@ type Post struct {
 	FrontMatter FrontMatter `json:"frontmatter"`
 }
 
-func loadPosts(contentDir string) ([]Post, error) {
-	posts := []Post{}
+type PostLoader struct {
+	contentDir string
+	logger     *log.Logger
+}
 
-	files, err := os.ReadDir(contentDir)
+func NewPostLoader(contentDir string) *PostLoader {
+	return &PostLoader{
+		contentDir: contentDir,
+		logger:     log.New(os.Stdout, "[PostLoader] ", log.LstdFlags),
+	}
+}
+
+func (pl *PostLoader) LoadAll() ([]Post, error) {
+	files, err := pl.listMarkdownFiles()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list markdown files: %w", err)
 	}
 
-	index := 0
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
+	posts := make([]Post, 0, len(files))
 
-		if !strings.HasSuffix(file.Name(), ".md") {
-			continue
-		}
-
-		filePath := filepath.Join(contentDir, file.Name())
-		content, err := os.ReadFile(filePath)
+	for index, file := range files {
+		post, err := pl.loadPost(file, index)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to load post %s: %w", file.Name(), err)
 		}
-
-		fm, body, err := parseFrontMatter(string(content), file.Name())
-		if err != nil {
-			return nil, fmt.Errorf("error parsing %s: %w", file.Name(), err)
-		}
-
-		posts = append(posts, Post{
-			Index:       index,
-			Markdown:    body,
-			FrontMatter: fm,
-		})
-
-		index++
+		posts = append(posts, post)
 	}
 
 	return posts, nil
 }
 
-func parseFrontMatter(content string, filename string) (FrontMatter, string, error) {
+func (pl *PostLoader) listMarkdownFiles() ([]os.DirEntry, error) {
+	entries, err := os.ReadDir(pl.contentDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var mdFiles []os.DirEntry
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
+			mdFiles = append(mdFiles, entry)
+		}
+	}
+
+	return mdFiles, nil
+}
+
+func (pl *PostLoader) loadPost(file os.DirEntry, index int) (Post, error) {
+	filePath := filepath.Join(pl.contentDir, file.Name())
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return Post{}, err
+	}
+
+	frontMatter, body, err := pl.parseFrontMatter(string(content), file.Name())
+	if err != nil {
+		return Post{}, err
+	}
+
+	return Post{
+		Index:       index,
+		Markdown:    body,
+		FrontMatter: frontMatter,
+	}, nil
+}
+
+func (pl *PostLoader) parseFrontMatter(content string, filename string) (FrontMatter, string, error) {
 	var fm FrontMatter
+
 	if !strings.HasPrefix(content, "---") {
 		return fm, content, errors.New("no frontmatter found")
 	}
@@ -78,19 +104,31 @@ func parseFrontMatter(content string, filename string) (FrontMatter, string, err
 
 	err := yaml.Unmarshal([]byte(parts[1]), &fm)
 	if err != nil {
-		log.Printf("error parsing frontmatter for %s: %v", filename, err)
+		pl.logger.Printf("error parsing frontmatter for %s: %v", filename, err)
 		return fm, content, err
 	}
 
-	if strings.TrimSpace(fm.Title) == "" {
-		log.Printf("warning: frontmatter 'title' is empty for %s", filename)
-	}
-	if strings.TrimSpace(fm.Author) == "" {
-		log.Printf("warning: frontmatter 'author' is empty for %s", filename)
-	}
-	if strings.TrimSpace(fm.Date) == "" {
-		log.Printf("warning: frontmatter 'date' is empty for %s", filename)
-	}
+	pl.validateFrontMatter(&fm, filename)
 
 	return fm, strings.TrimSpace(parts[2]), nil
+}
+
+func (pl *PostLoader) validateFrontMatter(fm *FrontMatter, filename string) {
+	if strings.TrimSpace(fm.Title) == "" {
+		pl.logger.Printf("warning: frontmatter 'title' is empty for %s", filename)
+	}
+	if strings.TrimSpace(fm.Author) == "" {
+		pl.logger.Printf("warning: frontmatter 'author' is empty for %s", filename)
+	}
+	if strings.TrimSpace(fm.Date) == "" {
+		pl.logger.Printf("warning: frontmatter 'date' is empty for %s", filename)
+	}
+}
+
+func (pl *PostLoader) Count() (int, error) {
+	files, err := pl.listMarkdownFiles()
+	if err != nil {
+		return 0, err
+	}
+	return len(files), nil
 }

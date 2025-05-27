@@ -13,7 +13,9 @@ func main() {
 
 	fmt.Printf("Loaded configuration: %s\n", cfg)
 
-	posts, err := loadPosts(cfg.ContentDir)
+	loader := NewPostLoader(cfg.ContentDir)
+
+	posts, err := loader.LoadAll()
 	if err != nil {
 		log.Fatalf("Failed to load posts: %v", err)
 	}
