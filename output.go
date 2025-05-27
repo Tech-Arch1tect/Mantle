@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func processOutput(cfg AppConfig, processedPosts ProcessedPosts) {
+func processOutput(cfg *Config, processedPosts ProcessedPosts) {
 	log.Println("Processing output...")
 
 	err := makeDirectories(cfg)
@@ -46,7 +46,7 @@ func saveJSON(path string, data interface{}) error {
 	return os.WriteFile(path, jsonData, 0644)
 }
 
-func makeDirectories(cfg AppConfig) error {
+func makeDirectories(cfg *Config) error {
 	directories := []string{
 		cfg.OutputDir + "/public_html/api/tags",
 		cfg.OutputDir + "/public_html/api/posts",

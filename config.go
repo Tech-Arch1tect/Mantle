@@ -1,25 +1,38 @@
 package main
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/Tech-Arch1tect/config"
 )
 
-type AppConfig struct {
+type Config struct {
 	ContentDir string `env:"CONTENT_DIR" validate:"required"`
 	OutputDir  string `env:"OUTPUT_DIR" validate:"required"`
 }
 
-func (c *AppConfig) SetDefaults() {
-	c.ContentDir = "./content"
-	c.OutputDir = "./output"
+func NewConfig() *Config {
+	return &Config{
+		ContentDir: "./content",
+		OutputDir:  "./output",
+	}
 }
 
-func loadConfig() (AppConfig, error) {
-	var cfg AppConfig
-	if err := config.Load(&cfg); err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+func (c *Config) Load() error {
+	c.SetDefaults()
+
+	if err := config.Load(c); err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
 	}
-	return cfg, nil
+
+	return nil
+}
+
+func (c *Config) SetDefaults() {
+	if c.ContentDir == "" {
+		c.ContentDir = "./content"
+	}
+	if c.OutputDir == "" {
+		c.OutputDir = "./output"
+	}
 }

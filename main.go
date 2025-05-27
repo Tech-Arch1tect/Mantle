@@ -6,12 +6,12 @@ import (
 )
 
 func main() {
-	cfg, err := loadConfig()
-	if err != nil {
+	cfg := NewConfig()
+	if err := cfg.Load(); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	fmt.Printf("Loaded configuration: %+v\n", cfg)
+	fmt.Printf("Loaded configuration: %s\n", cfg)
 
 	posts, err := loadPosts(cfg.ContentDir)
 	if err != nil {
