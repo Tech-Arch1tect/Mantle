@@ -1,13 +1,25 @@
 package main
 
-type ProcessedPosts struct {
-	Posts []Post
-	Tags  map[string][]int
+type PostProcessor interface {
+	Process(posts []Post) ProcessedPosts
 }
 
-func processPosts(posts []Post) ProcessedPosts {
-	processedPosts := ProcessedPosts{}
-	processedPosts.Tags = make(map[string][]int)
+type ProcessedPosts struct {
+	Posts []Post           `json:"posts"`
+	Tags  map[string][]int `json:"tags"`
+}
+
+type DefaultPostProcessor struct{}
+
+func NewPostProcessor() PostProcessor {
+	return &DefaultPostProcessor{}
+}
+
+func (pp *DefaultPostProcessor) Process(posts []Post) ProcessedPosts {
+	processedPosts := ProcessedPosts{
+		Posts: make([]Post, 0, len(posts)),
+		Tags:  make(map[string][]int),
+	}
 
 	for _, post := range posts {
 		processedPosts.Posts = append(processedPosts.Posts, post)

@@ -36,3 +36,7 @@ func (c *Config) SetDefaults() {
 		c.OutputDir = "./output"
 	}
 }
+
+func (c *Config) String() string {
+	return fmt.Sprintf("Config{ContentDir: %q, OutputDir: %q}", c.ContentDir, c.OutputDir)
+}
