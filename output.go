@@ -31,6 +31,10 @@ func (op *OutputProcessor) Process(processedPosts ProcessedPosts) error {
 		return fmt.Errorf("failed to save posts: %w", err)
 	}
 
+	if err := op.savePostPreviews(processedPosts.Posts); err != nil {
+		return fmt.Errorf("failed to save post previews: %w", err)
+	}
+
 	if err := op.saveTags(processedPosts.Tags); err != nil {
 		return fmt.Errorf("failed to save tags: %w", err)
 	}
@@ -50,6 +54,39 @@ func (op *OutputProcessor) savePosts(posts []Post) error {
 			fmt.Sprintf("post_%d.json", post.Index))
 		if err := op.saveJSON(postPath, post); err != nil {
 			return fmt.Errorf("failed to save post %d: %w", post.Index, err)
+		}
+	}
+
+	return nil
+}
+
+func (op *OutputProcessor) savePostPreviews(posts []Post) error {
+	type PostPreview struct {
+		Index       int         `json:"index"`
+		FrontMatter FrontMatter `json:"frontmatter"`
+		Excerpt     string      `json:"excerpt"`
+	}
+
+	previews := make([]PostPreview, 0, len(posts))
+	for _, post := range posts {
+		preview := PostPreview{
+			Index:       post.Index,
+			FrontMatter: post.FrontMatter,
+			Excerpt:     post.Excerpt,
+		}
+		previews = append(previews, preview)
+	}
+
+	previewsPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "all.json")
+	if err := op.saveJSON(previewsPath, previews); err != nil {
+		return fmt.Errorf("failed to save post previews: %w", err)
+	}
+
+	for _, preview := range previews {
+		previewPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews",
+			fmt.Sprintf("preview_%d.json", preview.Index))
+		if err := op.saveJSON(previewPath, preview); err != nil {
+			return fmt.Errorf("failed to save preview %d: %w", preview.Index, err)
 		}
 	}
 

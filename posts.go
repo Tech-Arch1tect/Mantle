@@ -17,10 +17,11 @@ var (
 )
 
 type FrontMatter struct {
-	Title  string   `yaml:"title"`
-	Author string   `yaml:"author"`
-	Date   string   `yaml:"date"`
-	Tags   []string `yaml:"tags"`
+	Title   string   `yaml:"title"`
+	Author  string   `yaml:"author"`
+	Date    string   `yaml:"date"`
+	Tags    []string `yaml:"tags"`
+	Excerpt string   `yaml:"excerpt,omitempty"`
 }
 
 func (fm FrontMatter) Validate() []string {
@@ -41,6 +42,7 @@ type Post struct {
 	Index       int         `json:"index"`
 	Markdown    string      `json:"markdown"`
 	FrontMatter FrontMatter `json:"frontmatter"`
+	Excerpt     string      `json:"excerpt"`
 }
 
 type PostLoaderInterface interface {
@@ -113,10 +115,13 @@ func (pl *PostLoader) loadPost(file fs.DirEntry, index int) (Post, error) {
 		return Post{}, fmt.Errorf("failed to parse frontmatter for %s: %w", file.Name(), err)
 	}
 
+	excerpt := pl.generateExcerpt(frontMatter, body)
+
 	return Post{
 		Index:       index,
 		Markdown:    body,
 		FrontMatter: frontMatter,
+		Excerpt:     excerpt,
 	}, nil
 }
 
@@ -141,6 +146,74 @@ func (pl *PostLoader) parseFrontMatter(content, filename string) (FrontMatter, s
 	}
 
 	return fm, strings.TrimSpace(parts[2]), nil
+}
+
+func (pl *PostLoader) generateExcerpt(fm FrontMatter, body string) string {
+	if fm.Excerpt != "" {
+		return fm.Excerpt
+	}
+
+	excerptSeparator := "<!--more-->"
+	if idx := strings.Index(body, excerptSeparator); idx != -1 {
+		return strings.TrimSpace(body[:idx])
+	}
+
+	return pl.autoGenerateExcerpt(body)
+}
+
+func (pl *PostLoader) autoGenerateExcerpt(body string) string {
+	const maxWords = 200
+	const maxChars = 1000
+
+	lines := strings.Split(body, "\n")
+	var cleanedLines []string
+	inCodeBlock := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		if strings.HasPrefix(trimmed, "```") {
+			inCodeBlock = !inCodeBlock
+			continue
+		}
+
+		if inCodeBlock {
+			continue
+		}
+
+		if strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+
+		if trimmed == "" {
+			continue
+		}
+
+		cleanedLines = append(cleanedLines, line)
+	}
+
+	cleanedBody := strings.Join(cleanedLines, " ")
+
+	words := strings.Fields(cleanedBody)
+
+	var excerpt []string
+	charCount := 0
+
+	for i, word := range words {
+		if i >= maxWords || charCount+len(word)+1 > maxChars {
+			break
+		}
+		excerpt = append(excerpt, word)
+		charCount += len(word) + 1
+	}
+
+	result := strings.Join(excerpt, " ")
+
+	if len(words) > len(excerpt) {
+		result += "..."
+	}
+
+	return result
 }
 
 func (pl *PostLoader) Count() (int, error) {
