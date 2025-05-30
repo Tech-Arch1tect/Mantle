@@ -6,10 +6,26 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
 )
+
+var tokenRegex = regexp.MustCompile(`[A-Za-z0-9_]+`)
+
+func tokenize(text string) []string {
+	words := tokenRegex.FindAllString(strings.ToLower(text), -1)
+	seen := make(map[string]struct{})
+	var tokens []string
+	for _, w := range words {
+		if _, ok := seen[w]; !ok {
+			seen[w] = struct{}{}
+			tokens = append(tokens, w)
+		}
+	}
+	return tokens
+}
 
 type OutputProcessor struct {
 	config *Config
@@ -57,6 +73,10 @@ func (op *OutputProcessor) Process(processedPosts ProcessedPosts) error {
 
 	if err := op.saveRelatedPosts(processedPosts.RelatedPosts); err != nil {
 		return fmt.Errorf("failed to save related posts: %w", err)
+	}
+
+	if err := op.saveSearchIndex(sortedPosts); err != nil {
+		return fmt.Errorf("failed to save search index: %w", err)
 	}
 
 	op.logger.Println("Output processed successfully")
@@ -465,13 +485,37 @@ func (op *OutputProcessor) createDirectories() error {
 		filepath.Join(op.config.OutputDir, "public_html", "api", "previews"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "categories"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "related"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "search"),
 	}
-
 	for _, dir := range directories {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
-
 	return nil
+}
+
+func (op *OutputProcessor) saveSearchIndex(posts []Post) error {
+	inverted := make(map[string][]int)
+	for _, p := range posts {
+		text := p.FrontMatter.Title + " " + strings.Join(p.FrontMatter.Tags, " ") + " " + p.Excerpt
+		toks := tokenize(text)
+		for _, t := range toks {
+			inverted[t] = append(inverted[t], p.Index)
+		}
+	}
+	for term, list := range inverted {
+		seen := make(map[int]struct{})
+		var unique []int
+		for _, idx := range list {
+			if _, ok := seen[idx]; !ok {
+				seen[idx] = struct{}{}
+				unique = append(unique, idx)
+			}
+		}
+		sort.Ints(unique)
+		inverted[term] = unique
+	}
+	path := filepath.Join(op.config.OutputDir, "public_html", "api", "search", "inverted.json")
+	return op.saveJSON(path, inverted)
 }
