@@ -55,7 +55,29 @@ func (op *OutputProcessor) Process(processedPosts ProcessedPosts) error {
 		return fmt.Errorf("failed to save paginated posts: %w", err)
 	}
 
+	if err := op.saveRelatedPosts(processedPosts.RelatedPosts); err != nil {
+		return fmt.Errorf("failed to save related posts: %w", err)
+	}
+
 	op.logger.Println("Output processed successfully")
+	return nil
+}
+
+func (op *OutputProcessor) saveRelatedPosts(relatedPosts map[int][]RelatedPost) error {
+	allRelatedPath := filepath.Join(op.config.OutputDir, "public_html", "api", "related", "all.json")
+	if err := op.saveJSON(allRelatedPath, relatedPosts); err != nil {
+		return fmt.Errorf("failed to save all related posts: %w", err)
+	}
+
+	for postIndex, related := range relatedPosts {
+		relatedPath := filepath.Join(op.config.OutputDir, "public_html", "api", "related",
+			fmt.Sprintf("post_%d.json", postIndex))
+		if err := op.saveJSON(relatedPath, related); err != nil {
+			return fmt.Errorf("failed to save related posts for post %d: %w", postIndex, err)
+		}
+	}
+
+	op.logger.Printf("Saved related posts for %d posts", len(relatedPosts))
 	return nil
 }
 
@@ -442,6 +464,7 @@ func (op *OutputProcessor) createDirectories() error {
 		filepath.Join(op.config.OutputDir, "public_html", "api", "posts"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "previews"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "categories"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "related"),
 	}
 
 	for _, dir := range directories {
