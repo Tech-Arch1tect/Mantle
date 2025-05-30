@@ -17,11 +17,12 @@ var (
 )
 
 type FrontMatter struct {
-	Title   string   `yaml:"title"`
-	Author  string   `yaml:"author"`
-	Date    string   `yaml:"date"`
-	Tags    []string `yaml:"tags"`
-	Excerpt string   `yaml:"excerpt,omitempty"`
+	Title    string   `yaml:"title"`
+	Author   string   `yaml:"author"`
+	Date     string   `yaml:"date"`
+	Tags     []string `yaml:"tags"`
+	Category string   `yaml:"category,omitempty"`
+	Excerpt  string   `yaml:"excerpt,omitempty"`
 }
 
 func (fm FrontMatter) Validate() []string {

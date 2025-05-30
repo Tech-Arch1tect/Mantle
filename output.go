@@ -47,6 +47,10 @@ func (op *OutputProcessor) Process(processedPosts ProcessedPosts) error {
 		return fmt.Errorf("failed to save tags: %w", err)
 	}
 
+	if err := op.saveCategories(processedPosts.Categories, sortedPosts); err != nil {
+		return fmt.Errorf("failed to save categories: %w", err)
+	}
+
 	if err := op.savePaginatedPosts(sortedPosts); err != nil {
 		return fmt.Errorf("failed to save paginated posts: %w", err)
 	}
@@ -88,6 +92,92 @@ func (op *OutputProcessor) sortPostsByDate(posts []Post) ([]Post, error) {
 	}
 
 	return sorted, nil
+}
+
+func (op *OutputProcessor) saveCategories(categories map[string]CategoryInfo, allPosts []Post) error {
+	allCategoriesPath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories", "all.json")
+	if err := op.saveJSON(allCategoriesPath, categories); err != nil {
+		return fmt.Errorf("failed to save all categories: %w", err)
+	}
+
+	for categoryPath, info := range categories {
+		safeFilename := strings.ReplaceAll(categoryPath, "/", "_")
+
+		categoryPosts := make([]Post, 0, len(info.PostIndices))
+		for _, idx := range info.PostIndices {
+			for _, post := range allPosts {
+				if post.Index == idx {
+					categoryPosts = append(categoryPosts, post)
+					break
+				}
+			}
+		}
+
+		sortedCategoryPosts, _ := op.sortPostsByDate(categoryPosts)
+
+		categoryDetail := map[string]interface{}{
+			"info":  info,
+			"posts": sortedCategoryPosts,
+		}
+
+		categoryPath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories",
+			fmt.Sprintf("%s.json", safeFilename))
+		if err := op.saveJSON(categoryPath, categoryDetail); err != nil {
+			return fmt.Errorf("failed to save category %s: %w", categoryPath, err)
+		}
+	}
+
+	tree := op.buildCategoryTree(categories)
+	treePath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories", "tree.json")
+	if err := op.saveJSON(treePath, tree); err != nil {
+		return fmt.Errorf("failed to save category tree: %w", err)
+	}
+
+	op.logger.Printf("Saved %d categories", len(categories))
+
+	return nil
+}
+
+type CategoryTreeNode struct {
+	Name      string             `json:"name"`
+	Path      string             `json:"path"`
+	PostCount int                `json:"postCount"`
+	Children  []CategoryTreeNode `json:"children,omitempty"`
+}
+
+func (op *OutputProcessor) buildCategoryTree(categories map[string]CategoryInfo) []CategoryTreeNode {
+	var roots []CategoryTreeNode
+
+	for path, info := range categories {
+		if info.Parent == "" {
+			roots = append(roots, op.buildTreeNode(path, categories))
+		}
+	}
+
+	sort.Slice(roots, func(i, j int) bool {
+		return roots[i].Name < roots[j].Name
+	})
+
+	return roots
+}
+
+func (op *OutputProcessor) buildTreeNode(path string, categories map[string]CategoryInfo) CategoryTreeNode {
+	info := categories[path]
+	node := CategoryTreeNode{
+		Name:      info.Name,
+		Path:      path,
+		PostCount: info.PostCount,
+	}
+
+	for _, childPath := range info.Children {
+		node.Children = append(node.Children, op.buildTreeNode(childPath, categories))
+	}
+
+	sort.Slice(node.Children, func(i, j int) bool {
+		return node.Children[i].Name < node.Children[j].Name
+	})
+
+	return node
 }
 
 func (op *OutputProcessor) savePaginatedPosts(posts []Post) error {
@@ -351,6 +441,7 @@ func (op *OutputProcessor) createDirectories() error {
 		filepath.Join(op.config.OutputDir, "public_html", "api", "tags"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "posts"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "previews"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "categories"),
 	}
 
 	for _, dir := range directories {
