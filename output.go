@@ -79,7 +79,87 @@ func (op *OutputProcessor) Process(processedPosts ProcessedPosts) error {
 		return fmt.Errorf("failed to save search index: %w", err)
 	}
 
+	if err := op.saveUnifiedMetadata(sortedPosts, processedPosts); err != nil {
+		return fmt.Errorf("failed to save unified metadata: %w", err)
+	}
+
 	op.logger.Println("Output processed successfully")
+	return nil
+}
+
+func (op *OutputProcessor) saveUnifiedMetadata(sortedPosts []Post, processedPosts ProcessedPosts) error {
+	totalPosts := len(sortedPosts)
+	postsPerPage := op.config.PostsPerPage
+	previewsPerPage := op.config.PreviewsPerPage
+	totalPages := (totalPosts + postsPerPage - 1) / postsPerPage
+	totalPreviewPages := (totalPosts + previewsPerPage - 1) / previewsPerPage
+
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if totalPreviewPages == 0 {
+		totalPreviewPages = 1
+	}
+
+	var oldestPost, newestPost map[string]interface{}
+	if len(sortedPosts) > 0 {
+		newest := sortedPosts[0]
+		newestPost = map[string]interface{}{
+			"index": newest.Index,
+			"title": newest.FrontMatter.Title,
+			"date":  newest.FrontMatter.Date,
+		}
+		oldest := sortedPosts[len(sortedPosts)-1]
+		oldestPost = map[string]interface{}{
+			"index": oldest.Index,
+			"title": oldest.FrontMatter.Title,
+			"date":  oldest.FrontMatter.Date,
+		}
+	}
+
+	tagStats := make(map[string]int)
+	for tag, postIndices := range processedPosts.Tags {
+		tagStats[tag] = len(postIndices)
+	}
+
+	categoryStats := make(map[string]int)
+	for _, categoryInfo := range processedPosts.Categories {
+		categoryStats[categoryInfo.Path] = categoryInfo.PostCount
+	}
+
+	metadata := map[string]interface{}{
+		"posts": map[string]interface{}{
+			"total":      totalPosts,
+			"perPage":    postsPerPage,
+			"totalPages": totalPages,
+			"newest":     newestPost,
+			"oldest":     oldestPost,
+		},
+		"previews": map[string]interface{}{
+			"total":      totalPosts,
+			"perPage":    previewsPerPage,
+			"totalPages": totalPreviewPages,
+		},
+		"tags": map[string]interface{}{
+			"total": len(processedPosts.Tags),
+			"stats": tagStats,
+		},
+		"categories": map[string]interface{}{
+			"total": len(processedPosts.Categories),
+			"stats": categoryStats,
+		},
+		"config": map[string]interface{}{
+			"dateFormat":         op.config.DateFormat,
+			"dateFormatReadable": op.convertDateFormatToReadable(op.config.DateFormat),
+		},
+	}
+
+	metaPath := filepath.Join(op.config.OutputDir, "public_html", "api", "meta.json")
+	if err := op.saveJSON(metaPath, metadata); err != nil {
+		return fmt.Errorf("failed to save unified metadata: %w", err)
+	}
+
+	op.logger.Println("Saved unified metadata")
 	return nil
 }
 
