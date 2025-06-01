@@ -33,5 +33,10 @@ func main() {
 		logger.Fatalf("Failed to process output: %v", err)
 	}
 
+	webServerGenerator := NewWebServerGenerator(cfg)
+	if err := webServerGenerator.Generate(); err != nil {
+		logger.Fatalf("Failed to generate webserver files: %v", err)
+	}
+
 	logger.Println("Mantle completed successfully")
 }
