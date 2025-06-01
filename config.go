@@ -7,20 +7,28 @@ import (
 )
 
 type Config struct {
-	ContentDir      string `env:"CONTENT_DIR" validate:"required"`
-	OutputDir       string `env:"OUTPUT_DIR" validate:"required"`
-	PostsPerPage    int    `env:"POSTS_PER_PAGE"`
-	PreviewsPerPage int    `env:"PREVIEWS_PER_PAGE"`
-	DateFormat      string `env:"DATE_FORMAT"`
+	ContentDir       string `env:"CONTENT_DIR" validate:"required"`
+	OutputDir        string `env:"OUTPUT_DIR" validate:"required"`
+	PostsPerPage     int    `env:"POSTS_PER_PAGE"`
+	PreviewsPerPage  int    `env:"PREVIEWS_PER_PAGE"`
+	DateFormat       string `env:"DATE_FORMAT"`
+	CorsAllowOrigin  string `env:"CORS_ALLOW_ORIGIN"`
+	CorsAllowMethods string `env:"CORS_ALLOW_METHODS"`
+	CorsAllowHeaders string `env:"CORS_ALLOW_HEADERS"`
+	CorsMaxAge       int    `env:"CORS_MAX_AGE"`
 }
 
 func NewConfig() *Config {
 	return &Config{
-		ContentDir:      "./content",
-		OutputDir:       "./output",
-		PostsPerPage:    10,
-		PreviewsPerPage: 10,
-		DateFormat:      "2006-01-02",
+		ContentDir:       "./content",
+		OutputDir:        "./output",
+		PostsPerPage:     10,
+		PreviewsPerPage:  10,
+		DateFormat:       "2006-01-02",
+		CorsAllowOrigin:  "*",
+		CorsAllowMethods: "GET, OPTIONS",
+		CorsAllowHeaders: "Origin, X-Requested-With, Content-Type, Accept",
+		CorsMaxAge:       86400,
 	}
 }
 
@@ -36,6 +44,9 @@ func (c *Config) Load() error {
 	}
 	if c.PreviewsPerPage < 1 {
 		return fmt.Errorf("previews per page must be at least 1, got %d", c.PreviewsPerPage)
+	}
+	if c.CorsMaxAge < 0 {
+		return fmt.Errorf("CORS max age must be non-negative, got %d", c.CorsMaxAge)
 	}
 
 	return nil
@@ -57,9 +68,21 @@ func (c *Config) SetDefaults() {
 	if c.DateFormat == "" {
 		c.DateFormat = "2006-01-02"
 	}
+	if c.CorsAllowOrigin == "" {
+		c.CorsAllowOrigin = "*"
+	}
+	if c.CorsAllowMethods == "" {
+		c.CorsAllowMethods = "GET, OPTIONS"
+	}
+	if c.CorsAllowHeaders == "" {
+		c.CorsAllowHeaders = "Origin, X-Requested-With, Content-Type, Accept"
+	}
+	if c.CorsMaxAge == 0 {
+		c.CorsMaxAge = 86400
+	}
 }
 
 func (c *Config) String() string {
-	return fmt.Sprintf("Config{ContentDir: %q, OutputDir: %q, PostsPerPage: %d, PreviewsPerPage: %d, DateFormat: %q}",
-		c.ContentDir, c.OutputDir, c.PostsPerPage, c.PreviewsPerPage, c.DateFormat)
+	return fmt.Sprintf("Config{ContentDir: %q, OutputDir: %q, PostsPerPage: %d, PreviewsPerPage: %d, DateFormat: %q, CorsAllowOrigin: %q, CorsAllowMethods: %q, CorsAllowHeaders: %q, CorsMaxAge: %d}",
+		c.ContentDir, c.OutputDir, c.PostsPerPage, c.PreviewsPerPage, c.DateFormat, c.CorsAllowOrigin, c.CorsAllowMethods, c.CorsAllowHeaders, c.CorsMaxAge)
 }

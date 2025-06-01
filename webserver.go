@@ -125,20 +125,28 @@ func (wsg *WebServerGenerator) generateMainNginxConfig(nginxDir string) error {
 }
 
 func (wsg *WebServerGenerator) generateCorsConfig(nginxDir string) error {
-	corsConf := `add_header Access-Control-Allow-Origin "*" always;
-add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
-add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept" always;
+	corsConf := fmt.Sprintf(`add_header Access-Control-Allow-Origin "%s" always;
+add_header Access-Control-Allow-Methods "%s" always;
+add_header Access-Control-Allow-Headers "%s" always;
 
 if ($request_method = 'OPTIONS') {
-    add_header Access-Control-Allow-Origin "*";
-    add_header Access-Control-Allow-Methods "GET, OPTIONS";
-    add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept";
-    add_header Access-Control-Max-Age 86400;
+    add_header Access-Control-Allow-Origin "%s";
+    add_header Access-Control-Allow-Methods "%s";
+    add_header Access-Control-Allow-Headers "%s";
+    add_header Access-Control-Max-Age %d;
     add_header Content-Length 0;
     add_header Content-Type text/plain;
     return 204;
 }
-`
+`,
+		wsg.config.CorsAllowOrigin,
+		wsg.config.CorsAllowMethods,
+		wsg.config.CorsAllowHeaders,
+		wsg.config.CorsAllowOrigin,
+		wsg.config.CorsAllowMethods,
+		wsg.config.CorsAllowHeaders,
+		wsg.config.CorsMaxAge,
+	)
 
 	corsConfPath := filepath.Join(nginxDir, "cors.conf")
 	return wsg.writeFile(corsConfPath, corsConf)
