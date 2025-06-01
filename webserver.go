@@ -80,6 +80,10 @@ func (wsg *WebServerGenerator) generateNginxConfigs(outputDir string) error {
 		return err
 	}
 
+	if err := wsg.generateMapsConfig(nginxDir); err != nil {
+		return err
+	}
+
 	if err := wsg.generateCorsConfig(nginxDir); err != nil {
 		return err
 	}
@@ -100,7 +104,9 @@ func (wsg *WebServerGenerator) generateNginxConfigs(outputDir string) error {
 }
 
 func (wsg *WebServerGenerator) generateMainNginxConfig(nginxDir string) error {
-	mainConf := `server {
+	mainConf := `include maps.conf;
+
+server {
     listen 80;
     server_name localhost;
     root /var/www/html;
@@ -113,6 +119,56 @@ func (wsg *WebServerGenerator) generateMainNginxConfig(nginxDir string) error {
         return 404;
     }
     
+    location = /api/posts {
+        include cors.conf;
+        
+        if ($post_resource != "") {
+            rewrite ^ /api/posts/$post_resource last;
+        }
+        
+        try_files /api/posts/all.json =404;
+    }
+    
+    location = /api/previews {
+        include cors.conf;
+        
+        if ($preview_resource != "") {
+            rewrite ^ /api/previews/$preview_resource last;
+        }
+        
+        try_files /api/previews/all.json =404;
+    }
+    
+    location = /api/tags {
+        include cors.conf;
+        
+        if ($tag_resource != "") {
+            rewrite ^ /api/tags/$tag_resource last;
+        }
+        
+        try_files /api/tags/all.json =404;
+    }
+    
+    location = /api/categories {
+        include cors.conf;
+        
+        if ($category_resource != "") {
+            rewrite ^ /api/categories/$category_resource last;
+        }
+        
+        try_files /api/categories/all.json =404;
+    }
+    
+    location = /api/related {
+        include cors.conf;
+        
+        if ($related_resource != "") {
+            rewrite ^ /api/related/$related_resource last;
+        }
+        
+        try_files /api/related/all.json =404;
+    }
+    
     location /api/ {
         include cors.conf;
         try_files $uri $uri/ =404;
@@ -122,6 +178,46 @@ func (wsg *WebServerGenerator) generateMainNginxConfig(nginxDir string) error {
 
 	mainConfPath := filepath.Join(nginxDir, "default.conf")
 	return wsg.writeFile(mainConfPath, mainConf)
+}
+
+func (wsg *WebServerGenerator) generateMapsConfig(nginxDir string) error {
+	mapsConf := `# Map query parameters to resource files
+
+# Posts mapping - ?id=1 -> post_1.json, ?page=2 -> page_2.json
+map $arg_id$arg_page $post_resource {
+    ~^(\d+)$      post_$1.json;
+    ~^.+(\d+)$    page_$1.json;
+    default       "";
+}
+
+# Previews mapping - ?id=1 -> preview_1.json, ?page=2 -> page_2.json
+map $arg_id$arg_page $preview_resource {
+    ~^(\d+)$      preview_$1.json;
+    ~^.+(\d+)$    page_$1.json;
+    default       "";
+}
+
+# Tags mapping - ?tag=golang -> golang.json
+map $arg_tag $tag_resource {
+    ~^(.+)$       $1.json;
+    default       "";
+}
+
+# Categories mapping - ?category=tech_tutorials -> tech_tutorials.json
+map $arg_category $category_resource {
+    ~^(.+)$       $1.json;
+    default       "";
+}
+
+# Related posts mapping - ?id=1 -> post_1.json
+map $arg_id $related_resource {
+    ~^(\d+)$      post_$1.json;
+    default       "";
+}
+`
+
+	mapsConfPath := filepath.Join(nginxDir, "maps.conf")
+	return wsg.writeFile(mapsConfPath, mapsConf)
 }
 
 func (wsg *WebServerGenerator) generateCorsConfig(nginxDir string) error {
