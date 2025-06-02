@@ -19,10 +19,11 @@ type CategoryInfo struct {
 }
 
 type RelatedPost struct {
-	Index      int    `json:"index"`
-	Title      string `json:"title"`
-	Date       string `json:"date"`
-	CommonTags int    `json:"commonTags"`
+	Index       int    `json:"index"`
+	Title       string `json:"title"`
+	Date        string `json:"date"`
+	CommonTags  int    `json:"commonTags"`
+	ReadingTime int    `json:"readingTime"`
 }
 
 type ProcessedPosts struct {
@@ -76,10 +77,11 @@ func (pp *DefaultPostProcessor) buildRelatedPosts(posts []Post, relatedPosts map
 			commonTags := pp.countCommonTags(post.FrontMatter.Tags, otherPost.FrontMatter.Tags)
 			if commonTags > 0 {
 				related = append(related, RelatedPost{
-					Index:      otherPost.Index,
-					Title:      otherPost.FrontMatter.Title,
-					Date:       otherPost.FrontMatter.Date,
-					CommonTags: commonTags,
+					Index:       otherPost.Index,
+					Title:       otherPost.FrontMatter.Title,
+					Date:        otherPost.FrontMatter.Date,
+					CommonTags:  commonTags,
+					ReadingTime: otherPost.ReadingTime,
 				})
 			}
 		}

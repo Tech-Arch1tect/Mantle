@@ -7,28 +7,30 @@ import (
 )
 
 type Config struct {
-	ContentDir       string `env:"CONTENT_DIR" validate:"required"`
-	OutputDir        string `env:"OUTPUT_DIR" validate:"required"`
-	PostsPerPage     int    `env:"POSTS_PER_PAGE"`
-	PreviewsPerPage  int    `env:"PREVIEWS_PER_PAGE"`
-	DateFormat       string `env:"DATE_FORMAT"`
-	CorsAllowOrigin  string `env:"CORS_ALLOW_ORIGIN"`
-	CorsAllowMethods string `env:"CORS_ALLOW_METHODS"`
-	CorsAllowHeaders string `env:"CORS_ALLOW_HEADERS"`
-	CorsMaxAge       int    `env:"CORS_MAX_AGE"`
+	ContentDir            string `env:"CONTENT_DIR" validate:"required"`
+	OutputDir             string `env:"OUTPUT_DIR" validate:"required"`
+	PostsPerPage          int    `env:"POSTS_PER_PAGE"`
+	PreviewsPerPage       int    `env:"PREVIEWS_PER_PAGE"`
+	DateFormat            string `env:"DATE_FORMAT"`
+	CorsAllowOrigin       string `env:"CORS_ALLOW_ORIGIN"`
+	CorsAllowMethods      string `env:"CORS_ALLOW_METHODS"`
+	CorsAllowHeaders      string `env:"CORS_ALLOW_HEADERS"`
+	CorsMaxAge            int    `env:"CORS_MAX_AGE"`
+	AverageWordsPerMinute int    `env:"AVERAGE_WORDS_PER_MINUTE"`
 }
 
 func NewConfig() *Config {
 	return &Config{
-		ContentDir:       "./content",
-		OutputDir:        "./output",
-		PostsPerPage:     10,
-		PreviewsPerPage:  10,
-		DateFormat:       "2006-01-02",
-		CorsAllowOrigin:  "*",
-		CorsAllowMethods: "GET, OPTIONS",
-		CorsAllowHeaders: "Origin, X-Requested-With, Content-Type, Accept",
-		CorsMaxAge:       86400,
+		ContentDir:            "./content",
+		OutputDir:             "./output",
+		PostsPerPage:          10,
+		PreviewsPerPage:       10,
+		DateFormat:            "2006-01-02",
+		CorsAllowOrigin:       "*",
+		CorsAllowMethods:      "GET, OPTIONS",
+		CorsAllowHeaders:      "Origin, X-Requested-With, Content-Type, Accept",
+		CorsMaxAge:            86400,
+		AverageWordsPerMinute: 200,
 	}
 }
 
@@ -79,6 +81,9 @@ func (c *Config) SetDefaults() {
 	}
 	if c.CorsMaxAge == 0 {
 		c.CorsMaxAge = 86400
+	}
+	if c.AverageWordsPerMinute == 0 {
+		c.AverageWordsPerMinute = 200
 	}
 }
 

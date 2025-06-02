@@ -44,6 +44,7 @@ type Post struct {
 	Markdown    string      `json:"markdown"`
 	FrontMatter FrontMatter `json:"frontmatter"`
 	Excerpt     string      `json:"excerpt"`
+	ReadingTime int         `json:"readingTime"`
 }
 
 type PostLoaderInterface interface {
@@ -52,16 +53,18 @@ type PostLoaderInterface interface {
 }
 
 type PostLoader struct {
-	contentDir string
-	logger     *log.Logger
-	fs         fs.FS
+	contentDir            string
+	logger                *log.Logger
+	fs                    fs.FS
+	averageWordsPerMinute int
 }
 
-func NewPostLoader(contentDir string) *PostLoader {
+func NewPostLoader(contentDir string, averageWordsPerMinute int) *PostLoader {
 	return &PostLoader{
-		contentDir: contentDir,
-		logger:     log.New(os.Stdout, "[PostLoader] ", log.LstdFlags),
-		fs:         os.DirFS(contentDir),
+		contentDir:            contentDir,
+		logger:                log.New(os.Stdout, "[PostLoader] ", log.LstdFlags),
+		fs:                    os.DirFS(contentDir),
+		averageWordsPerMinute: averageWordsPerMinute,
 	}
 }
 
@@ -117,13 +120,29 @@ func (pl *PostLoader) loadPost(file fs.DirEntry, index int) (Post, error) {
 	}
 
 	excerpt := pl.generateExcerpt(frontMatter, body)
+	readingTime := pl.calculateReadingTime(body)
 
 	return Post{
 		Index:       index,
 		Markdown:    body,
 		FrontMatter: frontMatter,
 		Excerpt:     excerpt,
+		ReadingTime: readingTime,
 	}, nil
+}
+
+func (pl *PostLoader) calculateReadingTime(markdown string) int {
+	words := strings.Fields(strings.ReplaceAll(markdown, "\n", " "))
+	wordCount := len(words)
+
+	averageWordsPerMinute := pl.averageWordsPerMinute
+	readingTimeMinutes := (wordCount + averageWordsPerMinute - 1) / averageWordsPerMinute
+
+	if readingTimeMinutes < 1 {
+		return 1
+	}
+
+	return readingTimeMinutes
 }
 
 func (pl *PostLoader) parseFrontMatter(content, filename string) (FrontMatter, string, error) {

@@ -393,6 +393,7 @@ func (op *OutputProcessor) savePostPreviews(posts []Post) error {
 		Index       int         `json:"index"`
 		FrontMatter FrontMatter `json:"frontmatter"`
 		Excerpt     string      `json:"excerpt"`
+		ReadingTime int         `json:"readingTime"`
 	}
 
 	previews := make([]PostPreview, 0, len(posts))
@@ -401,6 +402,7 @@ func (op *OutputProcessor) savePostPreviews(posts []Post) error {
 			Index:       post.Index,
 			FrontMatter: post.FrontMatter,
 			Excerpt:     post.Excerpt,
+			ReadingTime: post.ReadingTime,
 		}
 		previews = append(previews, preview)
 	}
