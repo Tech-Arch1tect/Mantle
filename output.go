@@ -105,21 +105,21 @@ func (op *OutputProcessor) saveUnifiedMetadata(sortedPosts []Post, processedPost
 	if len(sortedPosts) > 0 {
 		newest := sortedPosts[0]
 		newestPost = map[string]interface{}{
-			"index": newest.Index,
+			"slug":  newest.FrontMatter.Slug,
 			"title": newest.FrontMatter.Title,
 			"date":  newest.FrontMatter.Date,
 		}
 		oldest := sortedPosts[len(sortedPosts)-1]
 		oldestPost = map[string]interface{}{
-			"index": oldest.Index,
+			"slug":  oldest.FrontMatter.Slug,
 			"title": oldest.FrontMatter.Title,
 			"date":  oldest.FrontMatter.Date,
 		}
 	}
 
 	tagStats := make(map[string]int)
-	for tag, postIndices := range processedPosts.Tags {
-		tagStats[tag] = len(postIndices)
+	for tag, postSlugs := range processedPosts.Tags {
+		tagStats[tag] = len(postSlugs)
 	}
 
 	categoryStats := make(map[string]int)
@@ -163,17 +163,17 @@ func (op *OutputProcessor) saveUnifiedMetadata(sortedPosts []Post, processedPost
 	return nil
 }
 
-func (op *OutputProcessor) saveRelatedPosts(relatedPosts map[int][]RelatedPost) error {
+func (op *OutputProcessor) saveRelatedPosts(relatedPosts map[string][]RelatedPost) error {
 	allRelatedPath := filepath.Join(op.config.OutputDir, "public_html", "api", "related", "all.json")
 	if err := op.saveJSON(allRelatedPath, relatedPosts); err != nil {
 		return fmt.Errorf("failed to save all related posts: %w", err)
 	}
 
-	for postIndex, related := range relatedPosts {
+	for postSlug, related := range relatedPosts {
 		relatedPath := filepath.Join(op.config.OutputDir, "public_html", "api", "related",
-			fmt.Sprintf("post_%d.json", postIndex))
+			fmt.Sprintf("%s.json", postSlug))
 		if err := op.saveJSON(relatedPath, related); err != nil {
-			return fmt.Errorf("failed to save related posts for post %d: %w", postIndex, err)
+			return fmt.Errorf("failed to save related posts for post %s: %w", postSlug, err)
 		}
 	}
 
@@ -195,8 +195,8 @@ func (op *OutputProcessor) sortPostsByDate(posts []Post) ([]Post, error) {
 	for _, post := range sorted {
 		parsedDate, err := time.Parse(op.config.DateFormat, post.FrontMatter.Date)
 		if err != nil {
-			op.logger.Printf("Warning: Failed to parse date '%s' for post %d using format '%s': %v",
-				post.FrontMatter.Date, post.Index, op.config.DateFormat, err)
+			op.logger.Printf("Warning: Failed to parse date '%s' for post %s using format '%s': %v",
+				post.FrontMatter.Date, post.FrontMatter.Slug, op.config.DateFormat, err)
 			parsedDate = time.Unix(0, 0)
 		}
 		postsWithDates = append(postsWithDates, postWithDate{
@@ -225,10 +225,10 @@ func (op *OutputProcessor) saveCategories(categories map[string]CategoryInfo, al
 	for categoryPath, info := range categories {
 		safeFilename := strings.ReplaceAll(categoryPath, "/", "_")
 
-		categoryPosts := make([]Post, 0, len(info.PostIndices))
-		for _, idx := range info.PostIndices {
+		categoryPosts := make([]Post, 0, len(info.PostSlugs))
+		for _, slug := range info.PostSlugs {
 			for _, post := range allPosts {
-				if post.Index == idx {
+				if post.FrontMatter.Slug == slug {
 					categoryPosts = append(categoryPosts, post)
 					break
 				}
@@ -379,9 +379,9 @@ func (op *OutputProcessor) savePosts(posts []Post) error {
 
 	for _, post := range posts {
 		postPath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts",
-			fmt.Sprintf("post_%d.json", post.Index))
+			fmt.Sprintf("%s.json", post.FrontMatter.Slug))
 		if err := op.saveJSON(postPath, post); err != nil {
-			return fmt.Errorf("failed to save post %d: %w", post.Index, err)
+			return fmt.Errorf("failed to save post %s: %w", post.FrontMatter.Slug, err)
 		}
 	}
 
@@ -390,7 +390,6 @@ func (op *OutputProcessor) savePosts(posts []Post) error {
 
 func (op *OutputProcessor) savePostPreviews(posts []Post) error {
 	type PostPreview struct {
-		Index       int         `json:"index"`
 		FrontMatter FrontMatter `json:"frontmatter"`
 		Excerpt     string      `json:"excerpt"`
 		ReadingTime int         `json:"readingTime"`
@@ -399,7 +398,6 @@ func (op *OutputProcessor) savePostPreviews(posts []Post) error {
 	previews := make([]PostPreview, 0, len(posts))
 	for _, post := range posts {
 		preview := PostPreview{
-			Index:       post.Index,
 			FrontMatter: post.FrontMatter,
 			Excerpt:     post.Excerpt,
 			ReadingTime: post.ReadingTime,
@@ -414,9 +412,9 @@ func (op *OutputProcessor) savePostPreviews(posts []Post) error {
 
 	for _, preview := range previews {
 		previewPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews",
-			fmt.Sprintf("preview_%d.json", preview.Index))
+			fmt.Sprintf("%s.json", preview.FrontMatter.Slug))
 		if err := op.saveJSON(previewPath, preview); err != nil {
-			return fmt.Errorf("failed to save preview %d: %w", preview.Index, err)
+			return fmt.Errorf("failed to save preview %s: %w", preview.FrontMatter.Slug, err)
 		}
 	}
 
@@ -483,16 +481,16 @@ func (op *OutputProcessor) savePostPreviews(posts []Post) error {
 	return nil
 }
 
-func (op *OutputProcessor) saveTags(tags map[string][]int) error {
+func (op *OutputProcessor) saveTags(tags map[string][]string) error {
 	allTagsPath := filepath.Join(op.config.OutputDir, "public_html", "api", "tags", "all.json")
 	if err := op.saveJSON(allTagsPath, tags); err != nil {
 		return fmt.Errorf("failed to save all tags: %w", err)
 	}
 
-	for tag, postIndices := range tags {
+	for tag, postSlugs := range tags {
 		tagPath := filepath.Join(op.config.OutputDir, "public_html", "api", "tags",
 			fmt.Sprintf("%s.json", tag))
-		if err := op.saveJSON(tagPath, postIndices); err != nil {
+		if err := op.saveJSON(tagPath, postSlugs); err != nil {
 			return fmt.Errorf("failed to save tag %s: %w", tag, err)
 		}
 	}
@@ -578,24 +576,24 @@ func (op *OutputProcessor) createDirectories() error {
 }
 
 func (op *OutputProcessor) saveSearchIndex(posts []Post) error {
-	inverted := make(map[string][]int)
+	inverted := make(map[string][]string)
 	for _, p := range posts {
 		text := p.FrontMatter.Title + " " + strings.Join(p.FrontMatter.Tags, " ") + " " + p.Excerpt
 		toks := tokenize(text)
 		for _, t := range toks {
-			inverted[t] = append(inverted[t], p.Index)
+			inverted[t] = append(inverted[t], p.FrontMatter.Slug)
 		}
 	}
 	for term, list := range inverted {
-		seen := make(map[int]struct{})
-		var unique []int
-		for _, idx := range list {
-			if _, ok := seen[idx]; !ok {
-				seen[idx] = struct{}{}
-				unique = append(unique, idx)
+		seen := make(map[string]struct{})
+		var unique []string
+		for _, slug := range list {
+			if _, ok := seen[slug]; !ok {
+				seen[slug] = struct{}{}
+				unique = append(unique, slug)
 			}
 		}
-		sort.Ints(unique)
+		sort.Strings(unique)
 		inverted[term] = unique
 	}
 	path := filepath.Join(op.config.OutputDir, "public_html", "api", "search", "inverted.json")

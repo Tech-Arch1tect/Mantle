@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -23,6 +24,7 @@ type FrontMatter struct {
 	Tags     []string `yaml:"tags"`
 	Category string   `yaml:"category,omitempty"`
 	Excerpt  string   `yaml:"excerpt,omitempty"`
+	Slug     string   `yaml:"slug,omitempty"`
 }
 
 func (fm FrontMatter) Validate() []string {
@@ -40,7 +42,6 @@ func (fm FrontMatter) Validate() []string {
 }
 
 type Post struct {
-	Index       int         `json:"index"`
 	Markdown    string      `json:"markdown"`
 	FrontMatter FrontMatter `json:"frontmatter"`
 	Excerpt     string      `json:"excerpt"`
@@ -79,9 +80,10 @@ func (pl *PostLoader) LoadAll() ([]Post, error) {
 	}
 
 	posts := make([]Post, 0, len(files))
+	usedSlugs := make(map[string]bool)
 
-	for index, file := range files {
-		post, err := pl.loadPost(file, index)
+	for _, file := range files {
+		post, err := pl.loadPost(file, usedSlugs)
 		if err != nil {
 			pl.logger.Printf("failed to load post %s: %v", file.Name(), err)
 			continue
@@ -108,7 +110,7 @@ func (pl *PostLoader) listMarkdownFiles() ([]fs.DirEntry, error) {
 	return mdFiles, nil
 }
 
-func (pl *PostLoader) loadPost(file fs.DirEntry, index int) (Post, error) {
+func (pl *PostLoader) loadPost(file fs.DirEntry, usedSlugs map[string]bool) (Post, error) {
 	content, err := fs.ReadFile(pl.fs, file.Name())
 	if err != nil {
 		return Post{}, fmt.Errorf("failed to read file %s: %w", file.Name(), err)
@@ -119,16 +121,55 @@ func (pl *PostLoader) loadPost(file fs.DirEntry, index int) (Post, error) {
 		return Post{}, fmt.Errorf("failed to parse frontmatter for %s: %w", file.Name(), err)
 	}
 
+	if frontMatter.Slug == "" {
+		frontMatter.Slug = pl.generateSlug(frontMatter.Title)
+	}
+
+	frontMatter.Slug = pl.ensureUniqueSlug(frontMatter.Slug, usedSlugs)
+	usedSlugs[frontMatter.Slug] = true
+
 	excerpt := pl.generateExcerpt(frontMatter, body)
 	readingTime := pl.calculateReadingTime(body)
 
 	return Post{
-		Index:       index,
 		Markdown:    body,
 		FrontMatter: frontMatter,
 		Excerpt:     excerpt,
 		ReadingTime: readingTime,
 	}, nil
+}
+
+func (pl *PostLoader) ensureUniqueSlug(baseSlug string, usedSlugs map[string]bool) string {
+	slug := baseSlug
+	counter := 1
+
+	for usedSlugs[slug] {
+		slug = fmt.Sprintf("%s-%d", baseSlug, counter)
+		counter++
+	}
+
+	return slug
+}
+
+func (pl *PostLoader) generateSlug(title string) string {
+	slug := strings.ToLower(title)
+
+	reg := regexp.MustCompile(`[^a-z0-9\s-]`)
+	slug = reg.ReplaceAllString(slug, "")
+
+	spaceReg := regexp.MustCompile(`\s+`)
+	slug = spaceReg.ReplaceAllString(slug, "-")
+
+	dashReg := regexp.MustCompile(`-+`)
+	slug = dashReg.ReplaceAllString(slug, "-")
+
+	slug = strings.Trim(slug, "-")
+
+	if slug == "" {
+		slug = "untitled"
+	}
+
+	return slug
 }
 
 func (pl *PostLoader) calculateReadingTime(markdown string) int {

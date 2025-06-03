@@ -183,36 +183,36 @@ server {
 func (wsg *WebServerGenerator) generateMapsConfig(nginxDir string) error {
 	mapsConf := `# Map query parameters to resource files
 
-# Posts mapping - ?id=1 -> post_1.json, ?page=2 -> page_2.json
-map $arg_id$arg_page $post_resource {
-    ~^(\d+)$      post_$1.json;
-    ~^.+(\d+)$    page_$1.json;
-    default       "";
+# Posts mapping - ?slug=my-post -> my-post.json, ?page=2 -> page_2.json
+map $arg_slug$arg_page $post_resource {
+    ~^([^/]+)$      $1.json;
+    ~^.+(\d+)$      page_$1.json;
+    default         "";
 }
 
-# Previews mapping - ?id=1 -> preview_1.json, ?page=2 -> page_2.json
-map $arg_id$arg_page $preview_resource {
-    ~^(\d+)$      preview_$1.json;
-    ~^.+(\d+)$    page_$1.json;
-    default       "";
+# Previews mapping - ?slug=my-post -> my-post.json, ?page=2 -> page_2.json
+map $arg_slug$arg_page $preview_resource {
+    ~^([^/]+)$      $1.json;
+    ~^.+(\d+)$      page_$1.json;
+    default         "";
 }
 
 # Tags mapping - ?tag=golang -> golang.json
 map $arg_tag $tag_resource {
-    ~^(.+)$       $1.json;
-    default       "";
+    ~^(.+)$         $1.json;
+    default         "";
 }
 
 # Categories mapping - ?category=tech_tutorials -> tech_tutorials.json
 map $arg_category $category_resource {
-    ~^(.+)$       $1.json;
-    default       "";
+    ~^(.+)$         $1.json;
+    default         "";
 }
 
-# Related posts mapping - ?id=1 -> post_1.json
-map $arg_id $related_resource {
-    ~^(\d+)$      post_$1.json;
-    default       "";
+# Related posts mapping - ?slug=my-post -> my-post.json
+map $arg_slug $related_resource {
+    ~^([^/]+)$      $1.json;
+    default         "";
 }
 `
 

@@ -10,16 +10,16 @@ type PostProcessor interface {
 }
 
 type CategoryInfo struct {
-	Name        string   `json:"name"`
-	Path        string   `json:"path"`
-	PostIndices []int    `json:"postIndices"`
-	PostCount   int      `json:"postCount"`
-	Parent      string   `json:"parent,omitempty"`
-	Children    []string `json:"children,omitempty"`
+	Name      string   `json:"name"`
+	Path      string   `json:"path"`
+	PostSlugs []string `json:"postSlugs"`
+	PostCount int      `json:"postCount"`
+	Parent    string   `json:"parent,omitempty"`
+	Children  []string `json:"children,omitempty"`
 }
 
 type RelatedPost struct {
-	Index       int    `json:"index"`
+	Slug        string `json:"slug"`
 	Title       string `json:"title"`
 	Date        string `json:"date"`
 	CommonTags  int    `json:"commonTags"`
@@ -27,10 +27,10 @@ type RelatedPost struct {
 }
 
 type ProcessedPosts struct {
-	Posts        []Post                  `json:"posts"`
-	Tags         map[string][]int        `json:"tags"`
-	Categories   map[string]CategoryInfo `json:"categories"`
-	RelatedPosts map[int][]RelatedPost   `json:"relatedPosts"`
+	Posts        []Post                   `json:"posts"`
+	Tags         map[string][]string      `json:"tags"`
+	Categories   map[string]CategoryInfo  `json:"categories"`
+	RelatedPosts map[string][]RelatedPost `json:"relatedPosts"`
 }
 
 type DefaultPostProcessor struct{}
@@ -42,20 +42,20 @@ func NewPostProcessor() PostProcessor {
 func (pp *DefaultPostProcessor) Process(posts []Post) ProcessedPosts {
 	processedPosts := ProcessedPosts{
 		Posts:        make([]Post, 0, len(posts)),
-		Tags:         make(map[string][]int),
+		Tags:         make(map[string][]string),
 		Categories:   make(map[string]CategoryInfo),
-		RelatedPosts: make(map[int][]RelatedPost),
+		RelatedPosts: make(map[string][]RelatedPost),
 	}
 
 	for _, post := range posts {
 		processedPosts.Posts = append(processedPosts.Posts, post)
 
 		for _, tag := range post.FrontMatter.Tags {
-			processedPosts.Tags[tag] = append(processedPosts.Tags[tag], post.Index)
+			processedPosts.Tags[tag] = append(processedPosts.Tags[tag], post.FrontMatter.Slug)
 		}
 
 		if post.FrontMatter.Category != "" {
-			pp.processCategory(post.FrontMatter.Category, post.Index, processedPosts.Categories)
+			pp.processCategory(post.FrontMatter.Category, post.FrontMatter.Slug, processedPosts.Categories)
 		}
 	}
 
@@ -65,7 +65,7 @@ func (pp *DefaultPostProcessor) Process(posts []Post) ProcessedPosts {
 	return processedPosts
 }
 
-func (pp *DefaultPostProcessor) buildRelatedPosts(posts []Post, relatedPosts map[int][]RelatedPost) {
+func (pp *DefaultPostProcessor) buildRelatedPosts(posts []Post, relatedPosts map[string][]RelatedPost) {
 	for i, post := range posts {
 		var related []RelatedPost
 
@@ -77,7 +77,7 @@ func (pp *DefaultPostProcessor) buildRelatedPosts(posts []Post, relatedPosts map
 			commonTags := pp.countCommonTags(post.FrontMatter.Tags, otherPost.FrontMatter.Tags)
 			if commonTags > 0 {
 				related = append(related, RelatedPost{
-					Index:       otherPost.Index,
+					Slug:        otherPost.FrontMatter.Slug,
 					Title:       otherPost.FrontMatter.Title,
 					Date:        otherPost.FrontMatter.Date,
 					CommonTags:  commonTags,
@@ -97,7 +97,7 @@ func (pp *DefaultPostProcessor) buildRelatedPosts(posts []Post, relatedPosts map
 			related = related[:5]
 		}
 
-		relatedPosts[post.Index] = related
+		relatedPosts[post.FrontMatter.Slug] = related
 	}
 }
 
@@ -116,7 +116,7 @@ func (pp *DefaultPostProcessor) countCommonTags(tags1, tags2 []string) int {
 	return count
 }
 
-func (pp *DefaultPostProcessor) processCategory(category string, postIndex int, categories map[string]CategoryInfo) {
+func (pp *DefaultPostProcessor) processCategory(category string, postSlug string, categories map[string]CategoryInfo) {
 	parts := strings.Split(category, "/")
 	fullPath := ""
 
@@ -129,10 +129,10 @@ func (pp *DefaultPostProcessor) processCategory(category string, postIndex int, 
 		info, exists := categories[fullPath]
 		if !exists {
 			info = CategoryInfo{
-				Name:        part,
-				Path:        fullPath,
-				PostIndices: []int{},
-				Children:    []string{},
+				Name:      part,
+				Path:      fullPath,
+				PostSlugs: []string{},
+				Children:  []string{},
 			}
 			if i > 0 {
 				parentPath := strings.Join(parts[:i], "/")
@@ -141,9 +141,9 @@ func (pp *DefaultPostProcessor) processCategory(category string, postIndex int, 
 		}
 
 		if i == len(parts)-1 {
-			info.PostIndices = append(info.PostIndices, postIndex)
+			info.PostSlugs = append(info.PostSlugs, postSlug)
 		}
-		info.PostCount = len(info.PostIndices)
+		info.PostCount = len(info.PostSlugs)
 
 		categories[fullPath] = info
 	}
