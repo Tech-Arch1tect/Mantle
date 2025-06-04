@@ -9,29 +9,44 @@ type PostProcessor interface {
 	Process(posts []Post) ProcessedPosts
 }
 
+// @Description Category information including hierarchy and post associations
 type CategoryInfo struct {
-	Name      string   `json:"name"`
-	Path      string   `json:"path"`
-	PostSlugs []string `json:"postSlugs"`
-	PostCount int      `json:"postCount"`
-	Parent    string   `json:"parent,omitempty"`
-	Children  []string `json:"children,omitempty"`
+	Name      string   `json:"name" example:"Tutorials"`
+	Path      string   `json:"path" example:"tech/tutorials"`
+	PostSlugs []string `json:"postSlugs" example:"getting-started-with-go,advanced-go-patterns"`
+	PostCount int      `json:"postCount" example:"2"`
+	Parent    string   `json:"parent,omitempty" example:"tech"`
+	Children  []string `json:"children,omitempty" example:"golang,javascript"`
 }
 
+// @Description Related post information with similarity metrics
 type RelatedPost struct {
-	Slug        string `json:"slug"`
-	Title       string `json:"title"`
-	Date        string `json:"date"`
-	CommonTags  int    `json:"commonTags"`
-	ReadingTime int    `json:"readingTime"`
+	Slug        string `json:"slug" example:"advanced-go-patterns"`
+	Title       string `json:"title" example:"Advanced Go Patterns"`
+	Date        string `json:"date" example:"2024-01-20"`
+	CommonTags  int    `json:"commonTags" example:"3"`
+	ReadingTime int    `json:"readingTime" example:"8"`
 }
 
+// @Description Complete processed blog data including posts, tags, categories, and relationships
 type ProcessedPosts struct {
 	Posts        []Post                   `json:"posts"`
 	Tags         map[string][]string      `json:"tags"`
 	Categories   map[string]CategoryInfo  `json:"categories"`
 	RelatedPosts map[string][]RelatedPost `json:"relatedPosts"`
 }
+
+// @Description Mapping of tag names to arrays of post slugs
+type TagsMap map[string][]string
+
+// @Description Mapping of category paths to category information
+type CategoriesMap map[string]CategoryInfo
+
+// @Description Mapping of post slugs to arrays of related posts
+type RelatedPostsMap map[string][]RelatedPost
+
+// @Description Inverted search index mapping terms to post slugs for client-side search
+type SearchIndex map[string][]string
 
 type DefaultPostProcessor struct{}
 

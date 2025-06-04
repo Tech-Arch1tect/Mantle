@@ -38,5 +38,12 @@ func main() {
 		logger.Fatalf("Failed to generate webserver files: %v", err)
 	}
 
+	if cfg.GenerateSwagger {
+		swaggerGenerator := NewSwaggerGenerator(cfg)
+		if err := swaggerGenerator.Generate(); err != nil {
+			logger.Fatalf("Failed to generate OpenAPI specification: %v", err)
+		}
+	}
+
 	logger.Println("Mantle completed successfully")
 }

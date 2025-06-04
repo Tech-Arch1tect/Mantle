@@ -17,14 +17,15 @@ var (
 	ErrInvalidFrontMatter = errors.New("invalid frontmatter format")
 )
 
+// @Description Post frontmatter containing metadata
 type FrontMatter struct {
-	Title    string   `yaml:"title"`
-	Author   string   `yaml:"author"`
-	Date     string   `yaml:"date"`
-	Tags     []string `yaml:"tags"`
-	Category string   `yaml:"category,omitempty"`
-	Excerpt  string   `yaml:"excerpt,omitempty"`
-	Slug     string   `yaml:"slug,omitempty"`
+	Title    string   `yaml:"title" json:"title" example:"Getting Started with Go"`
+	Author   string   `yaml:"author" json:"author" example:"John Doe"`
+	Date     string   `yaml:"date" json:"date" example:"2024-01-15"`
+	Tags     []string `yaml:"tags" json:"tags" example:"golang,tutorial,beginner"`
+	Category string   `yaml:"category,omitempty" json:"category,omitempty" example:"tech/tutorials"`
+	Excerpt  string   `yaml:"excerpt,omitempty" json:"excerpt,omitempty" example:"Learn the basics of Go programming language"`
+	Slug     string   `yaml:"slug,omitempty" json:"slug,omitempty" example:"getting-started-with-go"`
 }
 
 func (fm FrontMatter) Validate() []string {
@@ -41,11 +42,48 @@ func (fm FrontMatter) Validate() []string {
 	return warnings
 }
 
+// @Description Complete blog post including markdown content and frontmatter
 type Post struct {
-	Markdown    string      `json:"markdown"`
+	Markdown    string      `json:"markdown" example:"# Getting Started with Go\n\nThis is the content..."`
 	FrontMatter FrontMatter `json:"frontmatter"`
-	Excerpt     string      `json:"excerpt"`
-	ReadingTime int         `json:"readingTime"`
+	Excerpt     string      `json:"excerpt" example:"This is a brief excerpt of the post..."`
+	ReadingTime int         `json:"readingTime" example:"5"`
+}
+
+// @Description Post preview containing frontmatter, excerpt, and reading time
+type PostPreview struct {
+	FrontMatter FrontMatter `json:"frontmatter"`
+	Excerpt     string      `json:"excerpt" example:"This is a brief excerpt of the post..."`
+	ReadingTime int         `json:"readingTime" example:"5"`
+}
+
+// @Description Error response format
+type ErrorResponse struct {
+	Error   string `json:"error" example:"Not found"`
+	Message string `json:"message,omitempty" example:"The requested resource was not found"`
+}
+
+// @Description Pagination information for responses
+type PaginationInfo struct {
+	Page        int  `json:"page" example:"0"`
+	TotalPages  int  `json:"totalPages" example:"5"`
+	TotalItems  int  `json:"totalItems" example:"42"`
+	HasNext     bool `json:"hasNext" example:"true"`
+	HasPrevious bool `json:"hasPrevious" example:"false"`
+	NextPage    *int `json:"nextPage,omitempty" example:"1"`
+	PrevPage    *int `json:"prevPage,omitempty" example:"0"`
+}
+
+// @Description Paginated response containing posts and pagination metadata
+type PostsResponse struct {
+	Posts []Post `json:"posts"`
+	PaginationInfo
+}
+
+// @Description Paginated response containing post previews and pagination metadata
+type PreviewsResponse struct {
+	Previews []PostPreview `json:"previews"`
+	PaginationInfo
 }
 
 type PostLoaderInterface interface {

@@ -27,6 +27,51 @@ func tokenize(text string) []string {
 	return tokens
 }
 
+// @Description Hierarchical category tree node
+type CategoryTreeNode struct {
+	Name      string             `json:"name" example:"Tutorials"`
+	Path      string             `json:"path" example:"tech/tutorials"`
+	PostCount int                `json:"postCount" example:"5"`
+	Children  []CategoryTreeNode `json:"children,omitempty"`
+}
+
+// @Description Hierarchical category tree structure
+type CategoryTree []CategoryTreeNode
+
+// @Description Category information with full post details
+type CategoryDetail struct {
+	Info  CategoryInfo `json:"info"`
+	Posts []Post       `json:"posts"`
+}
+
+// @Description Unified API metadata including counts, pagination info, and configuration
+type MetadataResponse struct {
+	Posts struct {
+		Total      int                    `json:"total" example:"42"`
+		PerPage    int                    `json:"perPage" example:"10"`
+		TotalPages int                    `json:"totalPages" example:"5"`
+		Newest     map[string]interface{} `json:"newest,omitempty"`
+		Oldest     map[string]interface{} `json:"oldest,omitempty"`
+	} `json:"posts"`
+	Previews struct {
+		Total      int `json:"total" example:"42"`
+		PerPage    int `json:"perPage" example:"10"`
+		TotalPages int `json:"totalPages" example:"5"`
+	} `json:"previews"`
+	Tags struct {
+		Total int            `json:"total" example:"15"`
+		Stats map[string]int `json:"stats"`
+	} `json:"tags"`
+	Categories struct {
+		Total int            `json:"total" example:"8"`
+		Stats map[string]int `json:"stats"`
+	} `json:"categories"`
+	Config struct {
+		DateFormat         string `json:"dateFormat" example:"2006-01-02"`
+		DateFormatReadable string `json:"dateFormatReadable" example:"yyyy-mm-dd"`
+	} `json:"config"`
+}
+
 type OutputProcessor struct {
 	config *Config
 	logger *log.Logger
@@ -237,9 +282,9 @@ func (op *OutputProcessor) saveCategories(categories map[string]CategoryInfo, al
 
 		sortedCategoryPosts, _ := op.sortPostsByDate(categoryPosts)
 
-		categoryDetail := map[string]interface{}{
-			"info":  info,
-			"posts": sortedCategoryPosts,
+		categoryDetail := CategoryDetail{
+			Info:  info,
+			Posts: sortedCategoryPosts,
 		}
 
 		categoryPath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories",
@@ -260,15 +305,8 @@ func (op *OutputProcessor) saveCategories(categories map[string]CategoryInfo, al
 	return nil
 }
 
-type CategoryTreeNode struct {
-	Name      string             `json:"name"`
-	Path      string             `json:"path"`
-	PostCount int                `json:"postCount"`
-	Children  []CategoryTreeNode `json:"children,omitempty"`
-}
-
-func (op *OutputProcessor) buildCategoryTree(categories map[string]CategoryInfo) []CategoryTreeNode {
-	var roots []CategoryTreeNode
+func (op *OutputProcessor) buildCategoryTree(categories map[string]CategoryInfo) CategoryTree {
+	var roots CategoryTree
 
 	for path, info := range categories {
 		if info.Parent == "" {
@@ -305,17 +343,6 @@ func (op *OutputProcessor) buildTreeNode(path string, categories map[string]Cate
 func (op *OutputProcessor) savePaginatedPosts(posts []Post) error {
 	postsPerPage := op.config.PostsPerPage
 
-	type PaginatedResponse struct {
-		Posts       []Post `json:"posts"`
-		Page        int    `json:"page"`
-		TotalPages  int    `json:"totalPages"`
-		TotalPosts  int    `json:"totalPosts"`
-		HasNext     bool   `json:"hasNext"`
-		HasPrevious bool   `json:"hasPrevious"`
-		NextPage    *int   `json:"nextPage,omitempty"`
-		PrevPage    *int   `json:"prevPage,omitempty"`
-	}
-
 	totalPages := (len(posts) + postsPerPage - 1) / postsPerPage
 	if totalPages == 0 {
 		totalPages = 1
@@ -328,13 +355,15 @@ func (op *OutputProcessor) savePaginatedPosts(posts []Post) error {
 			end = len(posts)
 		}
 
-		paginated := PaginatedResponse{
-			Posts:       posts[start:end],
-			Page:        page,
-			TotalPages:  totalPages,
-			TotalPosts:  len(posts),
-			HasNext:     page < totalPages-1,
-			HasPrevious: page > 0,
+		paginated := PostsResponse{
+			Posts: posts[start:end],
+			PaginationInfo: PaginationInfo{
+				Page:        page,
+				TotalPages:  totalPages,
+				TotalItems:  len(posts),
+				HasNext:     page < totalPages-1,
+				HasPrevious: page > 0,
+			},
 		}
 
 		if paginated.HasNext {
@@ -389,12 +418,6 @@ func (op *OutputProcessor) savePosts(posts []Post) error {
 }
 
 func (op *OutputProcessor) savePostPreviews(posts []Post) error {
-	type PostPreview struct {
-		FrontMatter FrontMatter `json:"frontmatter"`
-		Excerpt     string      `json:"excerpt"`
-		ReadingTime int         `json:"readingTime"`
-	}
-
 	previews := make([]PostPreview, 0, len(posts))
 	for _, post := range posts {
 		preview := PostPreview{
@@ -431,24 +454,15 @@ func (op *OutputProcessor) savePostPreviews(posts []Post) error {
 			end = len(previews)
 		}
 
-		type PaginatedPreviews struct {
-			Previews    []PostPreview `json:"previews"`
-			Page        int           `json:"page"`
-			TotalPages  int           `json:"totalPages"`
-			TotalItems  int           `json:"totalItems"`
-			HasNext     bool          `json:"hasNext"`
-			HasPrevious bool          `json:"hasPrevious"`
-			NextPage    *int          `json:"nextPage,omitempty"`
-			PrevPage    *int          `json:"prevPage,omitempty"`
-		}
-
-		paginated := PaginatedPreviews{
-			Previews:    previews[start:end],
-			Page:        page,
-			TotalPages:  totalPages,
-			TotalItems:  len(previews),
-			HasNext:     page < totalPages-1,
-			HasPrevious: page > 0,
+		paginated := PreviewsResponse{
+			Previews: previews[start:end],
+			PaginationInfo: PaginationInfo{
+				Page:        page,
+				TotalPages:  totalPages,
+				TotalItems:  len(previews),
+				HasNext:     page < totalPages-1,
+				HasPrevious: page > 0,
+			},
 		}
 
 		if paginated.HasNext {

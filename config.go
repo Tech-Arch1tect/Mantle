@@ -17,6 +17,7 @@ type Config struct {
 	CorsAllowHeaders      string `env:"CORS_ALLOW_HEADERS"`
 	CorsMaxAge            int    `env:"CORS_MAX_AGE"`
 	AverageWordsPerMinute int    `env:"AVERAGE_WORDS_PER_MINUTE"`
+	GenerateSwagger       bool   `env:"GENERATE_SWAGGER"`
 }
 
 func NewConfig() *Config {
@@ -31,6 +32,7 @@ func NewConfig() *Config {
 		CorsAllowHeaders:      "Origin, X-Requested-With, Content-Type, Accept",
 		CorsMaxAge:            86400,
 		AverageWordsPerMinute: 200,
+		GenerateSwagger:       true,
 	}
 }
 
@@ -88,6 +90,6 @@ func (c *Config) SetDefaults() {
 }
 
 func (c *Config) String() string {
-	return fmt.Sprintf("Config{ContentDir: %q, OutputDir: %q, PostsPerPage: %d, PreviewsPerPage: %d, DateFormat: %q, CorsAllowOrigin: %q, CorsAllowMethods: %q, CorsAllowHeaders: %q, CorsMaxAge: %d}",
-		c.ContentDir, c.OutputDir, c.PostsPerPage, c.PreviewsPerPage, c.DateFormat, c.CorsAllowOrigin, c.CorsAllowMethods, c.CorsAllowHeaders, c.CorsMaxAge)
+	return fmt.Sprintf("Config{ContentDir: %q, OutputDir: %q, PostsPerPage: %d, PreviewsPerPage: %d, DateFormat: %q, CorsAllowOrigin: %q, CorsAllowMethods: %q, CorsAllowHeaders: %q, CorsMaxAge: %d, GenerateSwagger: %t}",
+		c.ContentDir, c.OutputDir, c.PostsPerPage, c.PreviewsPerPage, c.DateFormat, c.CorsAllowOrigin, c.CorsAllowMethods, c.CorsAllowHeaders, c.CorsMaxAge, c.GenerateSwagger)
 }
