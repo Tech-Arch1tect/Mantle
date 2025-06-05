@@ -1,0 +1,486 @@
+basePath: /api
+definitions:
+  main.CategoriesMap:
+    additionalProperties:
+      $ref: '#/definitions/main.CategoryInfo'
+    description: Mapping of category paths to category information
+    type: object
+  main.CategoryDetail:
+    description: Category information with full post details
+    properties:
+      info:
+        $ref: '#/definitions/main.CategoryInfo'
+      posts:
+        items:
+          $ref: '#/definitions/main.Post'
+        type: array
+    type: object
+  main.CategoryInfo:
+    description: Category information including hierarchy and post associations
+    properties:
+      children:
+        example:
+        - golang
+        - javascript
+        items:
+          type: string
+        type: array
+      name:
+        example: Tutorials
+        type: string
+      parent:
+        example: tech
+        type: string
+      path:
+        example: tech/tutorials
+        type: string
+      postCount:
+        example: 2
+        type: integer
+      postSlugs:
+        example:
+        - getting-started-with-go
+        - advanced-go-patterns
+        items:
+          type: string
+        type: array
+    type: object
+  main.CategoryTreeNode:
+    description: Hierarchical category tree node
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/main.CategoryTreeNode'
+        type: array
+      name:
+        example: Tutorials
+        type: string
+      path:
+        example: tech/tutorials
+        type: string
+      postCount:
+        example: 5
+        type: integer
+    type: object
+  main.ErrorResponse:
+    description: Error response format
+    properties:
+      error:
+        example: Not found
+        type: string
+      message:
+        example: The requested resource was not found
+        type: string
+    type: object
+  main.FrontMatter:
+    description: Post frontmatter containing metadata
+    properties:
+      author:
+        example: John Doe
+        type: string
+      category:
+        example: tech/tutorials
+        type: string
+      date:
+        example: "2024-01-15"
+        type: string
+      excerpt:
+        example: Learn the basics of Go programming language
+        type: string
+      slug:
+        example: getting-started-with-go
+        type: string
+      tags:
+        example:
+        - golang
+        - tutorial
+        - beginner
+        items:
+          type: string
+        type: array
+      title:
+        example: Getting Started with Go
+        type: string
+    type: object
+  main.MetadataResponse:
+    description: Unified API metadata including counts, pagination info, and configuration
+    properties:
+      categories:
+        properties:
+          stats:
+            additionalProperties:
+              type: integer
+            type: object
+          total:
+            example: 8
+            type: integer
+        type: object
+      config:
+        properties:
+          dateFormat:
+            example: "2006-01-02"
+            type: string
+          dateFormatReadable:
+            example: yyyy-mm-dd
+            type: string
+        type: object
+      posts:
+        properties:
+          newest:
+            additionalProperties: true
+            type: object
+          oldest:
+            additionalProperties: true
+            type: object
+          perPage:
+            example: 10
+            type: integer
+          total:
+            example: 42
+            type: integer
+          totalPages:
+            example: 5
+            type: integer
+        type: object
+      previews:
+        properties:
+          perPage:
+            example: 10
+            type: integer
+          total:
+            example: 42
+            type: integer
+          totalPages:
+            example: 5
+            type: integer
+        type: object
+      tags:
+        properties:
+          stats:
+            additionalProperties:
+              type: integer
+            type: object
+          total:
+            example: 15
+            type: integer
+        type: object
+    type: object
+  main.Post:
+    description: Complete blog post including markdown content and frontmatter
+    properties:
+      excerpt:
+        example: This is a brief excerpt of the post...
+        type: string
+      frontmatter:
+        $ref: '#/definitions/main.FrontMatter'
+      markdown:
+        example: |-
+          # Getting Started with Go
+
+          This is the content...
+        type: string
+      readingTime:
+        example: 5
+        type: integer
+    type: object
+  main.PostPreview:
+    description: Post preview containing frontmatter, excerpt, and reading time
+    properties:
+      excerpt:
+        example: This is a brief excerpt of the post...
+        type: string
+      frontmatter:
+        $ref: '#/definitions/main.FrontMatter'
+      readingTime:
+        example: 5
+        type: integer
+    type: object
+  main.PostsResponse:
+    description: Paginated response containing posts and pagination metadata
+    properties:
+      hasNext:
+        example: true
+        type: boolean
+      hasPrevious:
+        example: false
+        type: boolean
+      nextPage:
+        example: 1
+        type: integer
+      page:
+        example: 0
+        type: integer
+      posts:
+        items:
+          $ref: '#/definitions/main.Post'
+        type: array
+      prevPage:
+        example: 0
+        type: integer
+      totalItems:
+        example: 42
+        type: integer
+      totalPages:
+        example: 5
+        type: integer
+    type: object
+  main.PreviewsResponse:
+    description: Paginated response containing post previews and pagination metadata
+    properties:
+      hasNext:
+        example: true
+        type: boolean
+      hasPrevious:
+        example: false
+        type: boolean
+      nextPage:
+        example: 1
+        type: integer
+      page:
+        example: 0
+        type: integer
+      prevPage:
+        example: 0
+        type: integer
+      previews:
+        items:
+          $ref: '#/definitions/main.PostPreview'
+        type: array
+      totalItems:
+        example: 42
+        type: integer
+      totalPages:
+        example: 5
+        type: integer
+    type: object
+  main.RelatedPost:
+    description: Related post information with similarity metrics
+    properties:
+      commonTags:
+        example: 3
+        type: integer
+      date:
+        example: "2024-01-20"
+        type: string
+      readingTime:
+        example: 8
+        type: integer
+      slug:
+        example: advanced-go-patterns
+        type: string
+      title:
+        example: Advanced Go Patterns
+        type: string
+    type: object
+  main.RelatedPostsMap:
+    additionalProperties:
+      items:
+        $ref: '#/definitions/main.RelatedPost'
+      type: array
+    description: Mapping of post slugs to arrays of related posts
+    type: object
+  main.SearchIndex:
+    additionalProperties:
+      items:
+        type: string
+      type: array
+    description: Inverted search index mapping terms to post slugs for client-side
+      search
+    type: object
+  main.TagsMap:
+    additionalProperties:
+      items:
+        type: string
+      type: array
+    description: Mapping of tag names to arrays of post slugs
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: A static API for blogs that transforms markdown files with frontmatter
+    into JSON endpoints
+  title: Mantle API
+  version: "1.0"
+paths:
+  /categories:
+    get:
+      consumes:
+      - application/json
+      description: Get all categories or filter by specific category
+      parameters:
+      - description: Category path (e.g., tech_tutorials)
+        in: query
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category with posts when category provided
+          schema:
+            $ref: '#/definitions/main.CategoryDetail'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Get all categories
+      tags:
+      - categories
+  /categories/tree.json:
+    get:
+      consumes:
+      - application/json
+      description: Get hierarchical category tree structure
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Hierarchical category tree
+          schema:
+            description: Hierarchical category tree structure
+            items:
+              $ref: '#/definitions/main.CategoryTreeNode'
+            type: array
+      summary: Get category tree
+      tags:
+      - categories
+  /meta.json:
+    get:
+      consumes:
+      - application/json
+      description: Get unified API metadata including counts, pagination info, and
+        configuration
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: API metadata
+          schema:
+            $ref: '#/definitions/main.MetadataResponse'
+      summary: Get API metadata
+      tags:
+      - metadata
+  /posts:
+    get:
+      consumes:
+      - application/json
+      description: Get all posts or filter by slug/page
+      parameters:
+      - description: Post slug
+        in: query
+        name: slug
+        type: string
+      - description: Page number (0-indexed)
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Paginated posts when page provided
+          schema:
+            $ref: '#/definitions/main.PostsResponse'
+        "404":
+          description: Post not found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Get all posts
+      tags:
+      - posts
+  /previews:
+    get:
+      consumes:
+      - application/json
+      description: Get all post previews or filter by slug/page
+      parameters:
+      - description: Post slug
+        in: query
+        name: slug
+        type: string
+      - description: Page number (0-indexed)
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Paginated previews when page provided
+          schema:
+            $ref: '#/definitions/main.PreviewsResponse'
+        "404":
+          description: Preview not found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Get all post previews
+      tags:
+      - previews
+  /related:
+    get:
+      consumes:
+      - application/json
+      description: Get related posts for all posts or for a specific post
+      parameters:
+      - description: Post slug
+        in: query
+        name: slug
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Related posts for specific post when slug provided
+          schema:
+            items:
+              $ref: '#/definitions/main.RelatedPost'
+            type: array
+        "404":
+          description: Post not found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Get related posts
+      tags:
+      - related
+  /search/inverted.json:
+    get:
+      consumes:
+      - application/json
+      description: Get inverted search index for client-side search
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inverted search index mapping terms to post slugs
+          schema:
+            $ref: '#/definitions/main.SearchIndex'
+      summary: Get search index
+      tags:
+      - search
+  /tags:
+    get:
+      consumes:
+      - application/json
+      description: Get all tags or filter posts by specific tag
+      parameters:
+      - description: Tag name
+        in: query
+        name: tag
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Post slugs for specific tag when tag provided
+          schema:
+            items:
+              type: string
+            type: array
+        "404":
+          description: Tag not found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Get all tags
+      tags:
+      - tags
+swagger: "2.0"

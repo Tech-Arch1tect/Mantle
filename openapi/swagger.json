@@ -1,0 +1,699 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "A static API for blogs that transforms markdown files with frontmatter into JSON endpoints",
+        "title": "Mantle API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api",
+    "paths": {
+        "/categories": {
+            "get": {
+                "description": "Get all categories or filter by specific category",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Get all categories",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category path (e.g., tech_tutorials)",
+                        "name": "category",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Category with posts when category provided",
+                        "schema": {
+                            "$ref": "#/definitions/main.CategoryDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Category not found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/categories/tree.json": {
+            "get": {
+                "description": "Get hierarchical category tree structure",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Get category tree",
+                "responses": {
+                    "200": {
+                        "description": "Hierarchical category tree",
+                        "schema": {
+                            "description": "Hierarchical category tree structure",
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.CategoryTreeNode"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/meta.json": {
+            "get": {
+                "description": "Get unified API metadata including counts, pagination info, and configuration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "metadata"
+                ],
+                "summary": "Get API metadata",
+                "responses": {
+                    "200": {
+                        "description": "API metadata",
+                        "schema": {
+                            "$ref": "#/definitions/main.MetadataResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts": {
+            "get": {
+                "description": "Get all posts or filter by slug/page",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Get all posts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post slug",
+                        "name": "slug",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (0-indexed)",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated posts when page provided",
+                        "schema": {
+                            "$ref": "#/definitions/main.PostsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Post not found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/previews": {
+            "get": {
+                "description": "Get all post previews or filter by slug/page",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "previews"
+                ],
+                "summary": "Get all post previews",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post slug",
+                        "name": "slug",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (0-indexed)",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated previews when page provided",
+                        "schema": {
+                            "$ref": "#/definitions/main.PreviewsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Preview not found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/related": {
+            "get": {
+                "description": "Get related posts for all posts or for a specific post",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "related"
+                ],
+                "summary": "Get related posts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post slug",
+                        "name": "slug",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Related posts for specific post when slug provided",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.RelatedPost"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Post not found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/search/inverted.json": {
+            "get": {
+                "description": "Get inverted search index for client-side search",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "search"
+                ],
+                "summary": "Get search index",
+                "responses": {
+                    "200": {
+                        "description": "Inverted search index mapping terms to post slugs",
+                        "schema": {
+                            "$ref": "#/definitions/main.SearchIndex"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags": {
+            "get": {
+                "description": "Get all tags or filter posts by specific tag",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Get all tags",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag name",
+                        "name": "tag",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Post slugs for specific tag when tag provided",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tag not found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.CategoriesMap": {
+            "description": "Mapping of category paths to category information",
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/main.CategoryInfo"
+            }
+        },
+        "main.CategoryDetail": {
+            "description": "Category information with full post details",
+            "type": "object",
+            "properties": {
+                "info": {
+                    "$ref": "#/definitions/main.CategoryInfo"
+                },
+                "posts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.Post"
+                    }
+                }
+            }
+        },
+        "main.CategoryInfo": {
+            "description": "Category information including hierarchy and post associations",
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "golang",
+                        "javascript"
+                    ]
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Tutorials"
+                },
+                "parent": {
+                    "type": "string",
+                    "example": "tech"
+                },
+                "path": {
+                    "type": "string",
+                    "example": "tech/tutorials"
+                },
+                "postCount": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "postSlugs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "getting-started-with-go",
+                        "advanced-go-patterns"
+                    ]
+                }
+            }
+        },
+        "main.CategoryTreeNode": {
+            "description": "Hierarchical category tree node",
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.CategoryTreeNode"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Tutorials"
+                },
+                "path": {
+                    "type": "string",
+                    "example": "tech/tutorials"
+                },
+                "postCount": {
+                    "type": "integer",
+                    "example": 5
+                }
+            }
+        },
+        "main.ErrorResponse": {
+            "description": "Error response format",
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Not found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "The requested resource was not found"
+                }
+            }
+        },
+        "main.FrontMatter": {
+            "description": "Post frontmatter containing metadata",
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "category": {
+                    "type": "string",
+                    "example": "tech/tutorials"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2024-01-15"
+                },
+                "excerpt": {
+                    "type": "string",
+                    "example": "Learn the basics of Go programming language"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "getting-started-with-go"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "golang",
+                        "tutorial",
+                        "beginner"
+                    ]
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Getting Started with Go"
+                }
+            }
+        },
+        "main.MetadataResponse": {
+            "description": "Unified API metadata including counts, pagination info, and configuration",
+            "type": "object",
+            "properties": {
+                "categories": {
+                    "type": "object",
+                    "properties": {
+                        "stats": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
+                        },
+                        "total": {
+                            "type": "integer",
+                            "example": 8
+                        }
+                    }
+                },
+                "config": {
+                    "type": "object",
+                    "properties": {
+                        "dateFormat": {
+                            "type": "string",
+                            "example": "2006-01-02"
+                        },
+                        "dateFormatReadable": {
+                            "type": "string",
+                            "example": "yyyy-mm-dd"
+                        }
+                    }
+                },
+                "posts": {
+                    "type": "object",
+                    "properties": {
+                        "newest": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "oldest": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "perPage": {
+                            "type": "integer",
+                            "example": 10
+                        },
+                        "total": {
+                            "type": "integer",
+                            "example": 42
+                        },
+                        "totalPages": {
+                            "type": "integer",
+                            "example": 5
+                        }
+                    }
+                },
+                "previews": {
+                    "type": "object",
+                    "properties": {
+                        "perPage": {
+                            "type": "integer",
+                            "example": 10
+                        },
+                        "total": {
+                            "type": "integer",
+                            "example": 42
+                        },
+                        "totalPages": {
+                            "type": "integer",
+                            "example": 5
+                        }
+                    }
+                },
+                "tags": {
+                    "type": "object",
+                    "properties": {
+                        "stats": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
+                        },
+                        "total": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                }
+            }
+        },
+        "main.Post": {
+            "description": "Complete blog post including markdown content and frontmatter",
+            "type": "object",
+            "properties": {
+                "excerpt": {
+                    "type": "string",
+                    "example": "This is a brief excerpt of the post..."
+                },
+                "frontmatter": {
+                    "$ref": "#/definitions/main.FrontMatter"
+                },
+                "markdown": {
+                    "type": "string",
+                    "example": "# Getting Started with Go\n\nThis is the content..."
+                },
+                "readingTime": {
+                    "type": "integer",
+                    "example": 5
+                }
+            }
+        },
+        "main.PostPreview": {
+            "description": "Post preview containing frontmatter, excerpt, and reading time",
+            "type": "object",
+            "properties": {
+                "excerpt": {
+                    "type": "string",
+                    "example": "This is a brief excerpt of the post..."
+                },
+                "frontmatter": {
+                    "$ref": "#/definitions/main.FrontMatter"
+                },
+                "readingTime": {
+                    "type": "integer",
+                    "example": 5
+                }
+            }
+        },
+        "main.PostsResponse": {
+            "description": "Paginated response containing posts and pagination metadata",
+            "type": "object",
+            "properties": {
+                "hasNext": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "hasPrevious": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "nextPage": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "posts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.Post"
+                    }
+                },
+                "prevPage": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "totalItems": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "totalPages": {
+                    "type": "integer",
+                    "example": 5
+                }
+            }
+        },
+        "main.PreviewsResponse": {
+            "description": "Paginated response containing post previews and pagination metadata",
+            "type": "object",
+            "properties": {
+                "hasNext": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "hasPrevious": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "nextPage": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "prevPage": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "previews": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.PostPreview"
+                    }
+                },
+                "totalItems": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "totalPages": {
+                    "type": "integer",
+                    "example": 5
+                }
+            }
+        },
+        "main.RelatedPost": {
+            "description": "Related post information with similarity metrics",
+            "type": "object",
+            "properties": {
+                "commonTags": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2024-01-20"
+                },
+                "readingTime": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "advanced-go-patterns"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Advanced Go Patterns"
+                }
+            }
+        },
+        "main.RelatedPostsMap": {
+            "description": "Mapping of post slugs to arrays of related posts",
+            "type": "object",
+            "additionalProperties": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/main.RelatedPost"
+                }
+            }
+        },
+        "main.SearchIndex": {
+            "description": "Inverted search index mapping terms to post slugs for client-side search",
+            "type": "object",
+            "additionalProperties": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.TagsMap": {
+            "description": "Mapping of tag names to arrays of post slugs",
+            "type": "object",
+            "additionalProperties": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
