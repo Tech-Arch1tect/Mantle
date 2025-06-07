@@ -154,6 +154,18 @@ definitions:
             example: 5
             type: integer
         type: object
+      site:
+        properties:
+          description:
+            example: My Site Description
+            type: string
+          name:
+            example: My Site
+            type: string
+          tagline:
+            example: My Site Tagline
+            type: string
+        type: object
       tags:
         properties:
           stats:

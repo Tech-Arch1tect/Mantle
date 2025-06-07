@@ -70,6 +70,11 @@ type MetadataResponse struct {
 		DateFormat         string `json:"dateFormat" example:"2006-01-02"`
 		DateFormatReadable string `json:"dateFormatReadable" example:"yyyy-mm-dd"`
 	} `json:"config"`
+	Site struct {
+		Name        string `json:"name" example:"My Site"`
+		Description string `json:"description" example:"My Site Description"`
+		Tagline     string `json:"tagline" example:"My Site Tagline"`
+	} `json:"site"`
 }
 
 type OutputProcessor struct {

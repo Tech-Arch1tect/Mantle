@@ -504,6 +504,23 @@
                         }
                     }
                 },
+                "site": {
+                    "type": "object",
+                    "properties": {
+                        "description": {
+                            "type": "string",
+                            "example": "My Site Description"
+                        },
+                        "name": {
+                            "type": "string",
+                            "example": "My Site"
+                        },
+                        "tagline": {
+                            "type": "string",
+                            "example": "My Site Tagline"
+                        }
+                    }
+                },
                 "tags": {
                     "type": "object",
                     "properties": {

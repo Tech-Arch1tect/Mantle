@@ -18,6 +18,9 @@ type Config struct {
 	CorsMaxAge            int    `env:"CORS_MAX_AGE"`
 	AverageWordsPerMinute int    `env:"AVERAGE_WORDS_PER_MINUTE"`
 	GenerateSwagger       bool   `env:"GENERATE_SWAGGER"`
+	SiteName              string `env:"SITE_NAME"`
+	SiteDescription       string `env:"SITE_DESCRIPTION"`
+	SiteTagline           string `env:"SITE_TAGLINE"`
 }
 
 func NewConfig() *Config {
@@ -86,6 +89,15 @@ func (c *Config) SetDefaults() {
 	}
 	if c.AverageWordsPerMinute == 0 {
 		c.AverageWordsPerMinute = 200
+	}
+	if c.SiteName == "" {
+		c.SiteName = "My Site"
+	}
+	if c.SiteDescription == "" {
+		c.SiteDescription = "My Site Description"
+	}
+	if c.SiteTagline == "" {
+		c.SiteTagline = "My Site Tagline"
 	}
 }
 
