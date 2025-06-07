@@ -202,6 +202,11 @@ func (op *OutputProcessor) saveUnifiedMetadata(sortedPosts []Post, processedPost
 			"dateFormat":         op.config.DateFormat,
 			"dateFormatReadable": op.convertDateFormatToReadable(op.config.DateFormat),
 		},
+		"site": map[string]interface{}{
+			"name":        op.config.SiteName,
+			"description": op.config.SiteDescription,
+			"tagline":     op.config.SiteTagline,
+		},
 	}
 
 	metaPath := filepath.Join(op.config.OutputDir, "public_html", "api", "meta.json")
