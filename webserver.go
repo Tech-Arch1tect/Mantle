@@ -184,16 +184,18 @@ func (wsg *WebServerGenerator) generateMapsConfig(nginxDir string) error {
 	mapsConf := `# Map query parameters to resource files
 
 # Posts mapping - ?slug=my-post -> my-post.json, ?page=2 -> page_2.json
-map $arg_slug$arg_page $post_resource {
-    ~^([^/]+)$      $1.json;
-    ~^.+(\d+)$      page_$1.json;
+map "$arg_slug:$arg_page" $post_resource {
+    ~^([^:]+):$     $1.json;        # slug only: ?slug=my-post
+    ~^:(\d+)$       page_$1.json;   # page only: ?page=2
+    ~^([^:]+):(\d+)$ $1.json;       # both present: slug takes priority
     default         "";
 }
 
 # Previews mapping - ?slug=my-post -> my-post.json, ?page=2 -> page_2.json
-map $arg_slug$arg_page $preview_resource {
-    ~^([^/]+)$      $1.json;
-    ~^.+(\d+)$      page_$1.json;
+map "$arg_slug:$arg_page" $preview_resource {
+    ~^([^:]+):$     $1.json;        # slug only: ?slug=my-post
+    ~^:(\d+)$       page_$1.json;   # page only: ?page=2
+    ~^([^:]+):(\d+)$ $1.json;       # both present: slug takes priority
     default         "";
 }
 
