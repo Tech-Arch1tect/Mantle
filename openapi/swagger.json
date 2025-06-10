@@ -96,9 +96,9 @@
                 }
             }
         },
-        "/posts": {
+        "/posts/by-page": {
             "get": {
-                "description": "Get all posts or filter by slug/page",
+                "description": "Get paginated posts with optional page parameter",
                 "consumes": [
                     "application/json"
                 ],
@@ -108,14 +108,8 @@
                 "tags": [
                     "posts"
                 ],
-                "summary": "Get all posts",
+                "summary": "Get paginated posts",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Post slug",
-                        "name": "slug",
-                        "in": "query"
-                    },
                     {
                         "type": "integer",
                         "description": "Page number (0-indexed)",
@@ -125,9 +119,53 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated posts when page provided",
+                        "description": "Paginated posts",
                         "schema": {
                             "$ref": "#/definitions/main.PostsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Page not found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/by-slug": {
+            "get": {
+                "description": "Get a specific post by its slug",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Get post by slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post slug",
+                        "name": "slug",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Single post",
+                        "schema": {
+                            "$ref": "#/definitions/main.Post"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing slug parameter",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
                         }
                     },
                     "404": {
@@ -139,9 +177,9 @@
                 }
             }
         },
-        "/previews": {
+        "/previews/by-page": {
             "get": {
-                "description": "Get all post previews or filter by slug/page",
+                "description": "Get paginated post previews with optional page parameter",
                 "consumes": [
                     "application/json"
                 ],
@@ -151,14 +189,8 @@
                 "tags": [
                     "previews"
                 ],
-                "summary": "Get all post previews",
+                "summary": "Get paginated previews",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Post slug",
-                        "name": "slug",
-                        "in": "query"
-                    },
                     {
                         "type": "integer",
                         "description": "Page number (0-indexed)",
@@ -168,9 +200,53 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated previews when page provided",
+                        "description": "Paginated previews",
                         "schema": {
                             "$ref": "#/definitions/main.PreviewsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Page not found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/previews/by-slug": {
+            "get": {
+                "description": "Get a specific post preview by its slug",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "previews"
+                ],
+                "summary": "Get preview by slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post slug",
+                        "name": "slug",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Single preview",
+                        "schema": {
+                            "$ref": "#/definitions/main.PostPreview"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing slug parameter",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
                         }
                     },
                     "404": {

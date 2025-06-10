@@ -16,33 +16,51 @@ import (
 // @host      localhost:8080
 // @BasePath  /api
 
-// @Summary Get all posts
-// @Description Get all posts or filter by slug/page
+// @Summary Get paginated posts
+// @Description Get paginated posts with optional page parameter
 // @Tags posts
 // @Accept json
 // @Produce json
-// @Param slug query string false "Post slug"
 // @Param page query int false "Page number (0-indexed)"
-// @Success 200 {array} Post "All posts"
-// @Success 200 {object} Post "Single post when slug provided"
-// @Success 200 {object} PostsResponse "Paginated posts when page provided"
-// @Failure 404 {object} ErrorResponse "Post not found"
-// @Router /posts [get]
-func GetPosts() {}
+// @Success 200 {object} PostsResponse "Paginated posts"
+// @Failure 404 {object} ErrorResponse "Page not found"
+// @Router /posts/by-page [get]
+func GetPostsByPage() {}
 
-// @Summary Get all post previews
-// @Description Get all post previews or filter by slug/page
+// @Summary Get post by slug
+// @Description Get a specific post by its slug
+// @Tags posts
+// @Accept json
+// @Produce json
+// @Param slug query string true "Post slug"
+// @Success 200 {object} Post "Single post"
+// @Failure 400 {object} ErrorResponse "Missing slug parameter"
+// @Failure 404 {object} ErrorResponse "Post not found"
+// @Router /posts/by-slug [get]
+func GetPostBySlug() {}
+
+// @Summary Get paginated previews
+// @Description Get paginated post previews with optional page parameter
 // @Tags previews
 // @Accept json
 // @Produce json
-// @Param slug query string false "Post slug"
 // @Param page query int false "Page number (0-indexed)"
-// @Success 200 {array} PostPreview "All previews"
-// @Success 200 {object} PostPreview "Single preview when slug provided"
-// @Success 200 {object} PreviewsResponse "Paginated previews when page provided"
+// @Success 200 {object} PreviewsResponse "Paginated previews"
+// @Failure 404 {object} ErrorResponse "Page not found"
+// @Router /previews/by-page [get]
+func GetPreviewsByPage() {}
+
+// @Summary Get preview by slug
+// @Description Get a specific post preview by its slug
+// @Tags previews
+// @Accept json
+// @Produce json
+// @Param slug query string true "Post slug"
+// @Success 200 {object} PostPreview "Single preview"
+// @Failure 400 {object} ErrorResponse "Missing slug parameter"
 // @Failure 404 {object} ErrorResponse "Preview not found"
-// @Router /previews [get]
-func GetPreviews() {}
+// @Router /previews/by-slug [get]
+func GetPreviewBySlug() {}
 
 // @Summary Get all tags
 // @Description Get all tags or filter posts by specific tag

@@ -385,8 +385,8 @@ func (op *OutputProcessor) savePaginatedPosts(posts []Post) error {
 			paginated.PrevPage = &prevPage
 		}
 
-		pagePath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts",
-			fmt.Sprintf("page_%d.json", page))
+		pagePath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "by-page",
+			fmt.Sprintf("%d.json", page))
 		if err := op.saveJSON(pagePath, paginated); err != nil {
 			return fmt.Errorf("failed to save page %d: %w", page, err)
 		}
@@ -411,17 +411,17 @@ func (op *OutputProcessor) savePaginatedPosts(posts []Post) error {
 }
 
 func (op *OutputProcessor) savePosts(posts []Post) error {
-	allPostsPath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "all.json")
-	if err := op.saveJSON(allPostsPath, posts); err != nil {
-		return fmt.Errorf("failed to save all posts: %w", err)
-	}
-
 	for _, post := range posts {
-		postPath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts",
+		postPath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "by-slug",
 			fmt.Sprintf("%s.json", post.FrontMatter.Slug))
 		if err := op.saveJSON(postPath, post); err != nil {
 			return fmt.Errorf("failed to save post %s: %w", post.FrontMatter.Slug, err)
 		}
+	}
+
+	allPostsPath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "all.json")
+	if err := op.saveJSON(allPostsPath, posts); err != nil {
+		return fmt.Errorf("failed to save all posts: %w", err)
 	}
 
 	return nil
@@ -438,13 +438,8 @@ func (op *OutputProcessor) savePostPreviews(posts []Post) error {
 		previews = append(previews, preview)
 	}
 
-	previewsPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "all.json")
-	if err := op.saveJSON(previewsPath, previews); err != nil {
-		return fmt.Errorf("failed to save post previews: %w", err)
-	}
-
 	for _, preview := range previews {
-		previewPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews",
+		previewPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "by-slug",
 			fmt.Sprintf("%s.json", preview.FrontMatter.Slug))
 		if err := op.saveJSON(previewPath, preview); err != nil {
 			return fmt.Errorf("failed to save preview %s: %w", preview.FrontMatter.Slug, err)
@@ -484,11 +479,16 @@ func (op *OutputProcessor) savePostPreviews(posts []Post) error {
 			paginated.PrevPage = &prevPage
 		}
 
-		pagePath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews",
-			fmt.Sprintf("page_%d.json", page))
+		pagePath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "by-page",
+			fmt.Sprintf("%d.json", page))
 		if err := op.saveJSON(pagePath, paginated); err != nil {
 			return fmt.Errorf("failed to save preview page %d: %w", page, err)
 		}
+	}
+
+	allPreviewsPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "all.json")
+	if err := op.saveJSON(allPreviewsPath, previews); err != nil {
+		return fmt.Errorf("failed to save all previews: %w", err)
 	}
 
 	previewMeta := map[string]interface{}{
@@ -585,8 +585,10 @@ func (op *OutputProcessor) saveJSON(path string, data interface{}) error {
 func (op *OutputProcessor) createDirectories() error {
 	directories := []string{
 		filepath.Join(op.config.OutputDir, "public_html", "api", "tags"),
-		filepath.Join(op.config.OutputDir, "public_html", "api", "posts"),
-		filepath.Join(op.config.OutputDir, "public_html", "api", "previews"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "by-slug"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "by-page"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "by-slug"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "by-page"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "categories"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "related"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "search"),

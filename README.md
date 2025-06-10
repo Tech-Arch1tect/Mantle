@@ -80,15 +80,15 @@ Your API will be available at `http://localhost:8080/api/`
 
 ### Posts
 
-- `GET /api/posts` - All posts
-- `GET /api/posts?id=1` - Specific post by index
-- `GET /api/posts?page=0` - Posts page (0-indexed)
+- `GET /api/posts/by-page` - Paginated posts (default: page 0)
+- `GET /api/posts/by-page?page=1` - Specific page of posts
+- `GET /api/posts/by-slug?slug=my-post` - Individual post by slug
 
 ### Previews
 
-- `GET /api/previews` - All post previews
-- `GET /api/previews?id=1` - Specific preview by index
-- `GET /api/previews?page=0` - Previews page (0-indexed)
+- `GET /api/previews/by-page` - Paginated previews (default: page 0)
+- `GET /api/previews/by-page?page=1` - Specific page of previews
+- `GET /api/previews/by-slug?slug=my-post` - Individual preview by slug
 
 ### Tags
 

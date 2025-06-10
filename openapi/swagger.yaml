@@ -372,16 +372,12 @@ paths:
       summary: Get API metadata
       tags:
       - metadata
-  /posts:
+  /posts/by-page:
     get:
       consumes:
       - application/json
-      description: Get all posts or filter by slug/page
+      description: Get paginated posts with optional page parameter
       parameters:
-      - description: Post slug
-        in: query
-        name: slug
-        type: string
       - description: Page number (0-indexed)
         in: query
         name: page
@@ -390,26 +386,51 @@ paths:
       - application/json
       responses:
         "200":
-          description: Paginated posts when page provided
+          description: Paginated posts
           schema:
             $ref: '#/definitions/main.PostsResponse'
+        "404":
+          description: Page not found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Get paginated posts
+      tags:
+      - posts
+  /posts/by-slug:
+    get:
+      consumes:
+      - application/json
+      description: Get a specific post by its slug
+      parameters:
+      - description: Post slug
+        in: query
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Single post
+          schema:
+            $ref: '#/definitions/main.Post'
+        "400":
+          description: Missing slug parameter
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
         "404":
           description: Post not found
           schema:
             $ref: '#/definitions/main.ErrorResponse'
-      summary: Get all posts
+      summary: Get post by slug
       tags:
       - posts
-  /previews:
+  /previews/by-page:
     get:
       consumes:
       - application/json
-      description: Get all post previews or filter by slug/page
+      description: Get paginated post previews with optional page parameter
       parameters:
-      - description: Post slug
-        in: query
-        name: slug
-        type: string
       - description: Page number (0-indexed)
         in: query
         name: page
@@ -418,14 +439,43 @@ paths:
       - application/json
       responses:
         "200":
-          description: Paginated previews when page provided
+          description: Paginated previews
           schema:
             $ref: '#/definitions/main.PreviewsResponse'
+        "404":
+          description: Page not found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Get paginated previews
+      tags:
+      - previews
+  /previews/by-slug:
+    get:
+      consumes:
+      - application/json
+      description: Get a specific post preview by its slug
+      parameters:
+      - description: Post slug
+        in: query
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Single preview
+          schema:
+            $ref: '#/definitions/main.PostPreview'
+        "400":
+          description: Missing slug parameter
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
         "404":
           description: Preview not found
           schema:
             $ref: '#/definitions/main.ErrorResponse'
-      summary: Get all post previews
+      summary: Get preview by slug
       tags:
       - previews
   /related:

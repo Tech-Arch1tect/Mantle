@@ -119,24 +119,44 @@ server {
         return 404;
     }
     
-    location = /api/posts {
+    location = /api/posts/by-page {
         include cors.conf;
         
-        if ($post_resource != "") {
-            rewrite ^ /api/posts/$post_resource last;
+        if ($page_param != "") {
+            rewrite ^ /api/posts/by-page/$page_param.json last;
         }
         
-        try_files /api/posts/all.json =404;
+        try_files /api/posts/by-page/0.json =404;
     }
     
-    location = /api/previews {
+    location = /api/posts/by-slug {
         include cors.conf;
         
-        if ($preview_resource != "") {
-            rewrite ^ /api/previews/$preview_resource last;
+        if ($slug_param = "") {
+            return 400;
         }
         
-        try_files /api/previews/all.json =404;
+        rewrite ^ /api/posts/by-slug/$slug_param.json last;
+    }
+    
+    location = /api/previews/by-page {
+        include cors.conf;
+        
+        if ($page_param != "") {
+            rewrite ^ /api/previews/by-page/$page_param.json last;
+        }
+        
+        try_files /api/previews/by-page/0.json =404;
+    }
+    
+    location = /api/previews/by-slug {
+        include cors.conf;
+        
+        if ($slug_param = "") {
+            return 400;
+        }
+        
+        rewrite ^ /api/previews/by-slug/$slug_param.json last;
     }
     
     location = /api/tags {
@@ -183,38 +203,34 @@ server {
 func (wsg *WebServerGenerator) generateMapsConfig(nginxDir string) error {
 	mapsConf := `# Map query parameters to resource files
 
-# Posts mapping - ?slug=my-post -> my-post.json, ?page=2 -> page_2.json
-map "$arg_slug:$arg_page" $post_resource {
-    ~^([^:]+):$     $1.json;        # slug only: ?slug=my-post
-    ~^:(\d+)$       page_$1.json;   # page only: ?page=2
-    ~^([^:]+):(\d+)$ $1.json;       # both present: slug takes priority
-    default         "";
+# Page parameter mapping - ?page=2 -> 2
+map $arg_page $page_param {
+    ~^(\d+)$    $1;
+    default     "";
 }
 
-# Previews mapping - ?slug=my-post -> my-post.json, ?page=2 -> page_2.json
-map "$arg_slug:$arg_page" $preview_resource {
-    ~^([^:]+):$     $1.json;        # slug only: ?slug=my-post
-    ~^:(\d+)$       page_$1.json;   # page only: ?page=2
-    ~^([^:]+):(\d+)$ $1.json;       # both present: slug takes priority
-    default         "";
+# Slug parameter mapping - ?slug=my-post -> my-post
+map $arg_slug $slug_param {
+    ~^([a-z0-9-]+)$    $1;
+    default            "";
 }
 
 # Tags mapping - ?tag=golang -> golang.json
 map $arg_tag $tag_resource {
-    ~^(.+)$         $1.json;
-    default         "";
+    ~^(.+)$     $1.json;
+    default     "";
 }
 
 # Categories mapping - ?category=tech_tutorials -> tech_tutorials.json
 map $arg_category $category_resource {
-    ~^(.+)$         $1.json;
-    default         "";
+    ~^(.+)$     $1.json;
+    default     "";
 }
 
 # Related posts mapping - ?slug=my-post -> my-post.json
 map $arg_slug $related_resource {
-    ~^([^/]+)$      $1.json;
-    default         "";
+    ~^([^/]+)$  $1.json;
+    default     "";
 }
 `
 
