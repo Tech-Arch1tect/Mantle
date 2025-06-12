@@ -32,9 +32,12 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Category with posts when category provided",
+                        "description": "Previews for a specific category (when ?category=...)",
                         "schema": {
-                            "$ref": "#/definitions/main.CategoryDetail"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.PostPreview"
+                            }
                         }
                     },
                     "404": {
@@ -344,11 +347,11 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Post slugs for specific tag when tag provided",
+                        "description": "Previews for specific tag (when ?tag=...)",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "type": "string"
+                                "$ref": "#/definitions/main.PostPreview"
                             }
                         }
                     },
@@ -368,21 +371,6 @@
             "type": "object",
             "additionalProperties": {
                 "$ref": "#/definitions/main.CategoryInfo"
-            }
-        },
-        "main.CategoryDetail": {
-            "description": "Category information with full post details",
-            "type": "object",
-            "properties": {
-                "info": {
-                    "$ref": "#/definitions/main.CategoryInfo"
-                },
-                "posts": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/main.Post"
-                    }
-                }
             }
         },
         "main.CategoryInfo": {

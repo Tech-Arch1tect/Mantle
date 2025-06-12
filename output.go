@@ -38,12 +38,6 @@ type CategoryTreeNode struct {
 // @Description Hierarchical category tree structure
 type CategoryTree []CategoryTreeNode
 
-// @Description Category information with full post details
-type CategoryDetail struct {
-	Info  CategoryInfo `json:"info"`
-	Posts []Post       `json:"posts"`
-}
-
 // @Description Unified API metadata including counts, pagination info, and configuration
 type MetadataResponse struct {
 	Posts struct {
@@ -109,7 +103,7 @@ func (op *OutputProcessor) Process(processedPosts ProcessedPosts) error {
 		return fmt.Errorf("failed to save post previews: %w", err)
 	}
 
-	if err := op.saveTags(processedPosts.Tags); err != nil {
+	if err := op.saveTags(processedPosts.Tags, sortedPosts); err != nil {
 		return fmt.Errorf("failed to save tags: %w", err)
 	}
 
@@ -279,27 +273,25 @@ func (op *OutputProcessor) saveCategories(categories map[string]CategoryInfo, al
 
 	for categoryPath, info := range categories {
 		safeFilename := strings.ReplaceAll(categoryPath, "/", "_")
-
-		categoryPosts := make([]Post, 0, len(info.PostSlugs))
+		var previews []PostPreview
 		for _, slug := range info.PostSlugs {
 			for _, post := range allPosts {
 				if post.FrontMatter.Slug == slug {
-					categoryPosts = append(categoryPosts, post)
+					previews = append(previews, PostPreview{
+						FrontMatter: post.FrontMatter,
+						Excerpt:     post.Excerpt,
+						ReadingTime: post.ReadingTime,
+					})
 					break
 				}
 			}
 		}
+		sort.Slice(previews, func(i, j int) bool {
+			return previews[i].FrontMatter.Date > previews[j].FrontMatter.Date
+		})
 
-		sortedCategoryPosts, _ := op.sortPostsByDate(categoryPosts)
-
-		categoryDetail := CategoryDetail{
-			Info:  info,
-			Posts: sortedCategoryPosts,
-		}
-
-		categoryPath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories",
-			fmt.Sprintf("%s.json", safeFilename))
-		if err := op.saveJSON(categoryPath, categoryDetail); err != nil {
+		categoryPath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories", fmt.Sprintf("%s.json", safeFilename))
+		if err := op.saveJSON(categoryPath, previews); err != nil {
 			return fmt.Errorf("failed to save category %s: %w", categoryPath, err)
 		}
 	}
@@ -311,7 +303,6 @@ func (op *OutputProcessor) saveCategories(categories map[string]CategoryInfo, al
 	}
 
 	op.logger.Printf("Saved %d categories", len(categories))
-
 	return nil
 }
 
@@ -505,20 +496,31 @@ func (op *OutputProcessor) savePostPreviews(posts []Post) error {
 	return nil
 }
 
-func (op *OutputProcessor) saveTags(tags map[string][]string) error {
+func (op *OutputProcessor) saveTags(tags map[string][]string, allPosts []Post) error {
 	allTagsPath := filepath.Join(op.config.OutputDir, "public_html", "api", "tags", "all.json")
 	if err := op.saveJSON(allTagsPath, tags); err != nil {
 		return fmt.Errorf("failed to save all tags: %w", err)
 	}
 
 	for tag, postSlugs := range tags {
-		tagPath := filepath.Join(op.config.OutputDir, "public_html", "api", "tags",
-			fmt.Sprintf("%s.json", tag))
-		if err := op.saveJSON(tagPath, postSlugs); err != nil {
+		var previews []PostPreview
+		for _, slug := range postSlugs {
+			for _, post := range allPosts {
+				if post.FrontMatter.Slug == slug {
+					previews = append(previews, PostPreview{
+						FrontMatter: post.FrontMatter,
+						Excerpt:     post.Excerpt,
+						ReadingTime: post.ReadingTime,
+					})
+					break
+				}
+			}
+		}
+		tagPath := filepath.Join(op.config.OutputDir, "public_html", "api", "tags", fmt.Sprintf("%s.json", tag))
+		if err := op.saveJSON(tagPath, previews); err != nil {
 			return fmt.Errorf("failed to save tag %s: %w", tag, err)
 		}
 	}
-
 	return nil
 }
 

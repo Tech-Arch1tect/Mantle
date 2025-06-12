@@ -68,8 +68,8 @@ func GetPreviewBySlug() {}
 // @Accept json
 // @Produce json
 // @Param tag query string false "Tag name"
-// @Success 200 {object} TagsMap "All tags with associated post slugs"
-// @Success 200 {array} string "Post slugs for specific tag when tag provided"
+// @Success 200 {object} TagsMap "All tags (used for /api/tags)"
+// @Success 200 {array} PostPreview "Previews for specific tag (when ?tag=...)"
 // @Failure 404 {object} ErrorResponse "Tag not found"
 // @Router /tags [get]
 func GetTags() {}
@@ -80,8 +80,8 @@ func GetTags() {}
 // @Accept json
 // @Produce json
 // @Param category query string false "Category path (e.g., tech_tutorials)"
-// @Success 200 {object} CategoriesMap "All categories"
-// @Success 200 {object} CategoryDetail "Category with posts when category provided"
+// @Success 200 {object} CategoriesMap "All categories (used for /api/categories)"
+// @Success 200 {array} PostPreview "Previews for a specific category (when ?category=...)"
 // @Failure 404 {object} ErrorResponse "Category not found"
 // @Router /categories [get]
 func GetCategories() {}

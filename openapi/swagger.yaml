@@ -5,16 +5,6 @@ definitions:
       $ref: '#/definitions/main.CategoryInfo'
     description: Mapping of category paths to category information
     type: object
-  main.CategoryDetail:
-    description: Category information with full post details
-    properties:
-      info:
-        $ref: '#/definitions/main.CategoryInfo'
-      posts:
-        items:
-          $ref: '#/definitions/main.Post'
-        type: array
-    type: object
   main.CategoryInfo:
     description: Category information including hierarchy and post associations
     properties:
@@ -328,9 +318,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Category with posts when category provided
+          description: Previews for a specific category (when ?category=...)
           schema:
-            $ref: '#/definitions/main.CategoryDetail'
+            items:
+              $ref: '#/definitions/main.PostPreview'
+            type: array
         "404":
           description: Category not found
           schema:
@@ -533,10 +525,10 @@ paths:
       - application/json
       responses:
         "200":
-          description: Post slugs for specific tag when tag provided
+          description: Previews for specific tag (when ?tag=...)
           schema:
             items:
-              type: string
+              $ref: '#/definitions/main.PostPreview'
             type: array
         "404":
           description: Tag not found
