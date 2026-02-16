@@ -11,33 +11,53 @@
     "paths": {
         "/categories": {
             "get": {
-                "description": "Get all categories or filter by specific category",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Get paginated post previews for a specific category",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "categories"
                 ],
-                "summary": "Get all categories",
+                "summary": "Get posts by category",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Category path (e.g., tech_tutorials)",
+                        "description": "Category path (e.g., tutorials/go)",
                         "name": "category",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Page number (0-indexed)",
+                        "name": "page",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Previews for a specific category (when ?category=...)",
+                        "description": "Paginated previews for category",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/main.PostPreview"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/main.PaginatedResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/main.PostPreview"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/definitions/main.PaginationInfo"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {
@@ -52,9 +72,6 @@
         "/categories/tree.json": {
             "get": {
                 "description": "Get hierarchical category tree structure",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -66,11 +83,23 @@
                     "200": {
                         "description": "Hierarchical category tree",
                         "schema": {
-                            "description": "Hierarchical category tree structure",
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/main.CategoryTreeNode"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/main.SingleResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "description": "Hierarchical category tree structure",
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/main.CategoryTreeNode"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -79,9 +108,6 @@
         "/meta.json": {
             "get": {
                 "description": "Get unified API metadata including counts, pagination info, and configuration",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -102,9 +128,6 @@
         "/posts/by-page": {
             "get": {
                 "description": "Get paginated posts with optional page parameter",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -115,6 +138,7 @@
                 "parameters": [
                     {
                         "type": "integer",
+                        "default": 0,
                         "description": "Page number (0-indexed)",
                         "name": "page",
                         "in": "query"
@@ -124,7 +148,25 @@
                     "200": {
                         "description": "Paginated posts",
                         "schema": {
-                            "$ref": "#/definitions/main.PostsResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/main.PaginatedResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/main.Post"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/definitions/main.PaginationInfo"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {
@@ -139,9 +181,6 @@
         "/posts/by-slug": {
             "get": {
                 "description": "Get a specific post by its slug",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -162,7 +201,19 @@
                     "200": {
                         "description": "Single post",
                         "schema": {
-                            "$ref": "#/definitions/main.Post"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/main.SingleResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/main.Post"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -183,9 +234,6 @@
         "/previews/by-page": {
             "get": {
                 "description": "Get paginated post previews with optional page parameter",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -196,6 +244,7 @@
                 "parameters": [
                     {
                         "type": "integer",
+                        "default": 0,
                         "description": "Page number (0-indexed)",
                         "name": "page",
                         "in": "query"
@@ -205,7 +254,25 @@
                     "200": {
                         "description": "Paginated previews",
                         "schema": {
-                            "$ref": "#/definitions/main.PreviewsResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/main.PaginatedResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/main.PostPreview"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/definitions/main.PaginationInfo"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {
@@ -220,9 +287,6 @@
         "/previews/by-slug": {
             "get": {
                 "description": "Get a specific post preview by its slug",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -243,7 +307,19 @@
                     "200": {
                         "description": "Single preview",
                         "schema": {
-                            "$ref": "#/definitions/main.PostPreview"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/main.SingleResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/main.PostPreview"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -263,10 +339,7 @@
         },
         "/related": {
             "get": {
-                "description": "Get related posts for all posts or for a specific post",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Get related posts for a specific post by slug",
                 "produces": [
                     "application/json"
                 ],
@@ -279,17 +352,39 @@
                         "type": "string",
                         "description": "Post slug",
                         "name": "slug",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Related posts for specific post when slug provided",
+                        "description": "Related posts",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/main.RelatedPost"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/main.PaginatedResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/main.RelatedPost"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/definitions/main.PaginationInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Missing slug parameter",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorResponse"
                         }
                     },
                     "404": {
@@ -301,12 +396,9 @@
                 }
             }
         },
-        "/search/inverted.json": {
+        "/search/index.json": {
             "get": {
                 "description": "Get inverted search index for client-side search",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -316,9 +408,21 @@
                 "summary": "Get search index",
                 "responses": {
                     "200": {
-                        "description": "Inverted search index mapping terms to post slugs",
+                        "description": "Search index",
                         "schema": {
-                            "$ref": "#/definitions/main.SearchIndex"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/main.SingleResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/main.SearchIndex"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -326,33 +430,53 @@
         },
         "/tags": {
             "get": {
-                "description": "Get all tags or filter posts by specific tag",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Get paginated post previews for a specific tag",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "tags"
                 ],
-                "summary": "Get all tags",
+                "summary": "Get posts by tag",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "Tag name",
                         "name": "tag",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Page number (0-indexed)",
+                        "name": "page",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Previews for specific tag (when ?tag=...)",
+                        "description": "Paginated previews for tag",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/main.PostPreview"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/main.PaginatedResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/main.PostPreview"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/definitions/main.PaginationInfo"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {
@@ -366,13 +490,6 @@
         }
     },
     "definitions": {
-        "main.CategoriesMap": {
-            "description": "Mapping of category paths to category information",
-            "type": "object",
-            "additionalProperties": {
-                "$ref": "#/definitions/main.CategoryInfo"
-            }
-        },
         "main.CategoryInfo": {
             "description": "Category information including hierarchy and post associations",
             "type": "object",
@@ -501,6 +618,10 @@
                 "categories": {
                     "type": "object",
                     "properties": {
+                        "perPage": {
+                            "type": "integer",
+                            "example": 20
+                        },
                         "stats": {
                             "type": "object",
                             "additionalProperties": {
@@ -510,6 +631,10 @@
                         "total": {
                             "type": "integer",
                             "example": 8
+                        },
+                        "totalPages": {
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 },
@@ -568,6 +693,15 @@
                         }
                     }
                 },
+                "related": {
+                    "type": "object",
+                    "properties": {
+                        "perPage": {
+                            "type": "integer",
+                            "example": 5
+                        }
+                    }
+                },
                 "site": {
                     "type": "object",
                     "properties": {
@@ -588,6 +722,10 @@
                 "tags": {
                     "type": "object",
                     "properties": {
+                        "perPage": {
+                            "type": "integer",
+                            "example": 20
+                        },
                         "stats": {
                             "type": "object",
                             "additionalProperties": {
@@ -597,8 +735,56 @@
                         "total": {
                             "type": "integer",
                             "example": 15
+                        },
+                        "totalPages": {
+                            "type": "integer",
+                            "example": 1
                         }
                     }
+                }
+            }
+        },
+        "main.PaginatedResponse": {
+            "description": "Standard paginated list envelope",
+            "type": "object",
+            "properties": {
+                "data": {},
+                "pagination": {
+                    "$ref": "#/definitions/main.PaginationInfo"
+                }
+            }
+        },
+        "main.PaginationInfo": {
+            "description": "Pagination information for responses",
+            "type": "object",
+            "properties": {
+                "hasNext": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "hasPrevious": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "nextPage": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "prevPage": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "totalItems": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "totalPages": {
+                    "type": "integer",
+                    "example": 5
                 }
             }
         },
@@ -640,86 +826,6 @@
                 }
             }
         },
-        "main.PostsResponse": {
-            "description": "Paginated response containing posts and pagination metadata",
-            "type": "object",
-            "properties": {
-                "hasNext": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "hasPrevious": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "nextPage": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "page": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "posts": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/main.Post"
-                    }
-                },
-                "prevPage": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "totalItems": {
-                    "type": "integer",
-                    "example": 42
-                },
-                "totalPages": {
-                    "type": "integer",
-                    "example": 5
-                }
-            }
-        },
-        "main.PreviewsResponse": {
-            "description": "Paginated response containing post previews and pagination metadata",
-            "type": "object",
-            "properties": {
-                "hasNext": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "hasPrevious": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "nextPage": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "page": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "prevPage": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "previews": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/main.PostPreview"
-                    }
-                },
-                "totalItems": {
-                    "type": "integer",
-                    "example": 42
-                },
-                "totalPages": {
-                    "type": "integer",
-                    "example": 5
-                }
-            }
-        },
         "main.RelatedPost": {
             "description": "Related post information with similarity metrics",
             "type": "object",
@@ -746,16 +852,6 @@
                 }
             }
         },
-        "main.RelatedPostsMap": {
-            "description": "Mapping of post slugs to arrays of related posts",
-            "type": "object",
-            "additionalProperties": {
-                "type": "array",
-                "items": {
-                    "$ref": "#/definitions/main.RelatedPost"
-                }
-            }
-        },
         "main.SearchIndex": {
             "description": "Inverted search index mapping terms to post slugs for client-side search",
             "type": "object",
@@ -766,13 +862,24 @@
                 }
             }
         },
-        "main.TagsMap": {
-            "description": "Mapping of tag names to arrays of post slugs",
+        "main.SingleResponse": {
+            "description": "Standard single-item envelope",
             "type": "object",
-            "additionalProperties": {
-                "type": "array",
-                "items": {
-                    "type": "string"
+            "properties": {
+                "data": {}
+            }
+        },
+        "main.TagInfo": {
+            "description": "Tag information",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "golang"
+                },
+                "postCount": {
+                    "type": "integer",
+                    "example": 5
                 }
             }
         }

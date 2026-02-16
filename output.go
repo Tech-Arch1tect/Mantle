@@ -53,13 +53,20 @@ type MetadataResponse struct {
 		TotalPages int `json:"totalPages" example:"5"`
 	} `json:"previews"`
 	Tags struct {
-		Total int            `json:"total" example:"15"`
-		Stats map[string]int `json:"stats"`
+		Total      int            `json:"total" example:"15"`
+		PerPage    int            `json:"perPage" example:"20"`
+		TotalPages int            `json:"totalPages" example:"1"`
+		Stats      map[string]int `json:"stats"`
 	} `json:"tags"`
 	Categories struct {
-		Total int            `json:"total" example:"8"`
-		Stats map[string]int `json:"stats"`
+		Total      int            `json:"total" example:"8"`
+		PerPage    int            `json:"perPage" example:"20"`
+		TotalPages int            `json:"totalPages" example:"1"`
+		Stats      map[string]int `json:"stats"`
 	} `json:"categories"`
+	Related struct {
+		PerPage int `json:"perPage" example:"5"`
+	} `json:"related"`
 	Config struct {
 		DateFormat         string `json:"dateFormat" example:"2006-01-02"`
 		DateFormatReadable string `json:"dateFormatReadable" example:"yyyy-mm-dd"`
@@ -99,6 +106,10 @@ func (op *OutputProcessor) Process(processedPosts ProcessedPosts) error {
 		return fmt.Errorf("failed to save posts: %w", err)
 	}
 
+	if err := op.savePaginatedPosts(sortedPosts); err != nil {
+		return fmt.Errorf("failed to save paginated posts: %w", err)
+	}
+
 	if err := op.savePostPreviews(sortedPosts); err != nil {
 		return fmt.Errorf("failed to save post previews: %w", err)
 	}
@@ -109,10 +120,6 @@ func (op *OutputProcessor) Process(processedPosts ProcessedPosts) error {
 
 	if err := op.saveCategories(processedPosts.Categories, sortedPosts); err != nil {
 		return fmt.Errorf("failed to save categories: %w", err)
-	}
-
-	if err := op.savePaginatedPosts(sortedPosts); err != nil {
-		return fmt.Errorf("failed to save paginated posts: %w", err)
 	}
 
 	if err := op.saveRelatedPosts(processedPosts.RelatedPosts); err != nil {
@@ -131,18 +138,382 @@ func (op *OutputProcessor) Process(processedPosts ProcessedPosts) error {
 	return nil
 }
 
+func paginateAndSave[T any](op *OutputProcessor, items []T, perPage int, baseDir string) (PaginationInfo, error) {
+	totalItems := len(items)
+	totalPages := (totalItems + perPage - 1) / perPage
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	var overallPagination PaginationInfo
+
+	for page := 0; page < totalPages; page++ {
+		start := page * perPage
+		end := start + perPage
+		if end > totalItems {
+			end = totalItems
+		}
+
+		var pageItems []T
+		if start < totalItems {
+			pageItems = items[start:end]
+		} else {
+			pageItems = []T{}
+		}
+
+		pagination := PaginationInfo{
+			Page:        page,
+			TotalPages:  totalPages,
+			TotalItems:  totalItems,
+			HasNext:     page < totalPages-1,
+			HasPrevious: page > 0,
+		}
+
+		if pagination.HasNext {
+			nextPage := page + 1
+			pagination.NextPage = &nextPage
+		}
+		if pagination.HasPrevious {
+			prevPage := page - 1
+			pagination.PrevPage = &prevPage
+		}
+
+		envelope := PaginatedResponse{
+			Data:       pageItems,
+			Pagination: pagination,
+		}
+
+		pagePath := filepath.Join(baseDir, fmt.Sprintf("%d.json", page))
+		if err := op.saveJSON(pagePath, envelope); err != nil {
+			return PaginationInfo{}, fmt.Errorf("failed to save page %d: %w", page, err)
+		}
+
+		if page == 0 {
+			overallPagination = pagination
+		}
+	}
+
+	overallPagination.TotalItems = totalItems
+	overallPagination.TotalPages = totalPages
+	return overallPagination, nil
+}
+
+func (op *OutputProcessor) saveSingleItem(item interface{}, path string) error {
+	envelope := SingleResponse{Data: item}
+	return op.saveJSON(path, envelope)
+}
+
+func (op *OutputProcessor) savePosts(posts []Post) error {
+	for _, post := range posts {
+		postPath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "by-slug",
+			fmt.Sprintf("%s.json", post.FrontMatter.Slug))
+		if err := op.saveSingleItem(post, postPath); err != nil {
+			return fmt.Errorf("failed to save post %s: %w", post.FrontMatter.Slug, err)
+		}
+	}
+	return nil
+}
+
+func (op *OutputProcessor) savePaginatedPosts(posts []Post) error {
+	baseDir := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "by-page")
+	_, err := paginateAndSave(op, posts, op.config.PostsPerPage, baseDir)
+	if err != nil {
+		return err
+	}
+
+	totalPages := (len(posts) + op.config.PostsPerPage - 1) / op.config.PostsPerPage
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	metadata := map[string]interface{}{
+		"totalItems":         len(posts),
+		"perPage":            op.config.PostsPerPage,
+		"totalPages":         totalPages,
+		"dateFormat":         op.config.DateFormat,
+		"dateFormatReadable": op.convertDateFormatToReadable(op.config.DateFormat),
+	}
+
+	metaPath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "meta.json")
+	if err := op.saveJSON(metaPath, metadata); err != nil {
+		return fmt.Errorf("failed to save posts metadata: %w", err)
+	}
+
+	op.logger.Printf("Created %d post pagination pages with %d posts per page", totalPages, op.config.PostsPerPage)
+	return nil
+}
+
+func (op *OutputProcessor) savePostPreviews(posts []Post) error {
+	previews := make([]PostPreview, 0, len(posts))
+	for _, post := range posts {
+		previews = append(previews, PostPreview{
+			FrontMatter: post.FrontMatter,
+			Excerpt:     post.Excerpt,
+			ReadingTime: post.ReadingTime,
+		})
+	}
+
+	for _, preview := range previews {
+		previewPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "by-slug",
+			fmt.Sprintf("%s.json", preview.FrontMatter.Slug))
+		if err := op.saveSingleItem(preview, previewPath); err != nil {
+			return fmt.Errorf("failed to save preview %s: %w", preview.FrontMatter.Slug, err)
+		}
+	}
+
+	baseDir := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "by-page")
+	_, err := paginateAndSave(op, previews, op.config.PreviewsPerPage, baseDir)
+	if err != nil {
+		return err
+	}
+
+	totalPages := (len(previews) + op.config.PreviewsPerPage - 1) / op.config.PreviewsPerPage
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	previewMeta := map[string]interface{}{
+		"totalItems": len(previews),
+		"perPage":    op.config.PreviewsPerPage,
+		"totalPages": totalPages,
+	}
+
+	previewMetaPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "meta.json")
+	if err := op.saveJSON(previewMetaPath, previewMeta); err != nil {
+		return fmt.Errorf("failed to save preview metadata: %w", err)
+	}
+
+	return nil
+}
+
+func (op *OutputProcessor) saveTags(tags map[string][]string, allPosts []Post) error {
+	tagInfos := make([]TagInfo, 0, len(tags))
+	for tag, postSlugs := range tags {
+		tagInfos = append(tagInfos, TagInfo{
+			Name:      tag,
+			PostCount: len(postSlugs),
+		})
+	}
+	sort.Slice(tagInfos, func(i, j int) bool {
+		return tagInfos[i].Name < tagInfos[j].Name
+	})
+
+	baseDir := filepath.Join(op.config.OutputDir, "public_html", "api", "tags", "by-page")
+	_, err := paginateAndSave(op, tagInfos, op.config.TagsPerPage, baseDir)
+	if err != nil {
+		return fmt.Errorf("failed to paginate tags: %w", err)
+	}
+
+	postBySlug := make(map[string]Post, len(allPosts))
+	for _, post := range allPosts {
+		postBySlug[post.FrontMatter.Slug] = post
+	}
+
+	for tag, postSlugs := range tags {
+		var previews []PostPreview
+		for _, slug := range postSlugs {
+			if post, ok := postBySlug[slug]; ok {
+				previews = append(previews, PostPreview{
+					FrontMatter: post.FrontMatter,
+					Excerpt:     post.Excerpt,
+					ReadingTime: post.ReadingTime,
+				})
+			}
+		}
+		sort.Slice(previews, func(i, j int) bool {
+			return previews[i].FrontMatter.Date > previews[j].FrontMatter.Date
+		})
+
+		tagBaseDir := filepath.Join(op.config.OutputDir, "public_html", "api", "tags", "by-name", tag, "by-page")
+		if _, err := paginateAndSave(op, previews, op.config.TagsPerPage, tagBaseDir); err != nil {
+			return fmt.Errorf("failed to paginate tag %s: %w", tag, err)
+		}
+	}
+
+	totalTagPages := (len(tagInfos) + op.config.TagsPerPage - 1) / op.config.TagsPerPage
+	if totalTagPages == 0 {
+		totalTagPages = 1
+	}
+
+	tagStats := make(map[string]int, len(tags))
+	for tag, slugs := range tags {
+		tagStats[tag] = len(slugs)
+	}
+
+	tagMeta := map[string]interface{}{
+		"totalItems": len(tagInfos),
+		"perPage":    op.config.TagsPerPage,
+		"totalPages": totalTagPages,
+		"stats":      tagStats,
+	}
+
+	tagMetaPath := filepath.Join(op.config.OutputDir, "public_html", "api", "tags", "meta.json")
+	if err := op.saveJSON(tagMetaPath, tagMeta); err != nil {
+		return fmt.Errorf("failed to save tags metadata: %w", err)
+	}
+
+	op.logger.Printf("Saved %d tags", len(tags))
+	return nil
+}
+
+func (op *OutputProcessor) saveCategories(categories map[string]CategoryInfo, allPosts []Post) error {
+	catInfos := make([]CategoryInfo, 0, len(categories))
+	for _, info := range categories {
+		catInfos = append(catInfos, info)
+	}
+	sort.Slice(catInfos, func(i, j int) bool {
+		return catInfos[i].Path < catInfos[j].Path
+	})
+
+	baseDir := filepath.Join(op.config.OutputDir, "public_html", "api", "categories", "by-page")
+	if _, err := paginateAndSave(op, catInfos, op.config.CategoriesPerPage, baseDir); err != nil {
+		return fmt.Errorf("failed to paginate categories: %w", err)
+	}
+
+	postBySlug := make(map[string]Post, len(allPosts))
+	for _, post := range allPosts {
+		postBySlug[post.FrontMatter.Slug] = post
+	}
+
+	for catPath, info := range categories {
+		var previews []PostPreview
+		for _, slug := range info.PostSlugs {
+			if post, ok := postBySlug[slug]; ok {
+				previews = append(previews, PostPreview{
+					FrontMatter: post.FrontMatter,
+					Excerpt:     post.Excerpt,
+					ReadingTime: post.ReadingTime,
+				})
+			}
+		}
+		sort.Slice(previews, func(i, j int) bool {
+			return previews[i].FrontMatter.Date > previews[j].FrontMatter.Date
+		})
+
+		catBaseDir := filepath.Join(op.config.OutputDir, "public_html", "api", "categories", "by-path", catPath, "by-page")
+		if _, err := paginateAndSave(op, previews, op.config.CategoriesPerPage, catBaseDir); err != nil {
+			return fmt.Errorf("failed to paginate category %s: %w", catPath, err)
+		}
+	}
+
+	tree := op.buildCategoryTree(categories)
+	treePath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories", "tree.json")
+	if err := op.saveSingleItem(tree, treePath); err != nil {
+		return fmt.Errorf("failed to save category tree: %w", err)
+	}
+
+	totalCatPages := (len(catInfos) + op.config.CategoriesPerPage - 1) / op.config.CategoriesPerPage
+	if totalCatPages == 0 {
+		totalCatPages = 1
+	}
+
+	categoryStats := make(map[string]int, len(categories))
+	for _, info := range categories {
+		categoryStats[info.Path] = info.PostCount
+	}
+
+	catMeta := map[string]interface{}{
+		"totalItems": len(catInfos),
+		"perPage":    op.config.CategoriesPerPage,
+		"totalPages": totalCatPages,
+		"stats":      categoryStats,
+	}
+
+	catMetaPath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories", "meta.json")
+	if err := op.saveJSON(catMetaPath, catMeta); err != nil {
+		return fmt.Errorf("failed to save categories metadata: %w", err)
+	}
+
+	op.logger.Printf("Saved %d categories", len(categories))
+	return nil
+}
+
+func (op *OutputProcessor) saveRelatedPosts(relatedPosts map[string][]RelatedPost) error {
+	for postSlug, related := range relatedPosts {
+		pagination := PaginationInfo{
+			Page:        0,
+			TotalPages:  1,
+			TotalItems:  len(related),
+			HasNext:     false,
+			HasPrevious: false,
+		}
+
+		envelope := PaginatedResponse{
+			Data:       related,
+			Pagination: pagination,
+		}
+
+		relatedPath := filepath.Join(op.config.OutputDir, "public_html", "api", "related", "by-slug",
+			fmt.Sprintf("%s.json", postSlug))
+		if err := op.saveJSON(relatedPath, envelope); err != nil {
+			return fmt.Errorf("failed to save related posts for post %s: %w", postSlug, err)
+		}
+	}
+
+	relatedMeta := map[string]interface{}{
+		"totalItems": len(relatedPosts),
+		"perPage":    op.config.RelatedPerPage,
+		"totalPages": 1,
+	}
+
+	relatedMetaPath := filepath.Join(op.config.OutputDir, "public_html", "api", "related", "meta.json")
+	if err := op.saveJSON(relatedMetaPath, relatedMeta); err != nil {
+		return fmt.Errorf("failed to save related metadata: %w", err)
+	}
+
+	op.logger.Printf("Saved related posts for %d posts", len(relatedPosts))
+	return nil
+}
+
+func (op *OutputProcessor) saveSearchIndex(posts []Post) error {
+	inverted := make(map[string][]string)
+	for _, p := range posts {
+		text := p.FrontMatter.Title + " " + strings.Join(p.FrontMatter.Tags, " ") + " " + p.Excerpt
+		toks := tokenize(text)
+		for _, t := range toks {
+			inverted[t] = append(inverted[t], p.FrontMatter.Slug)
+		}
+	}
+	for term, list := range inverted {
+		seen := make(map[string]struct{})
+		var unique []string
+		for _, slug := range list {
+			if _, ok := seen[slug]; !ok {
+				seen[slug] = struct{}{}
+				unique = append(unique, slug)
+			}
+		}
+		sort.Strings(unique)
+		inverted[term] = unique
+	}
+
+	path := filepath.Join(op.config.OutputDir, "public_html", "api", "search", "index.json")
+	return op.saveSingleItem(inverted, path)
+}
+
 func (op *OutputProcessor) saveUnifiedMetadata(sortedPosts []Post, processedPosts ProcessedPosts) error {
 	totalPosts := len(sortedPosts)
 	postsPerPage := op.config.PostsPerPage
 	previewsPerPage := op.config.PreviewsPerPage
-	totalPages := (totalPosts + postsPerPage - 1) / postsPerPage
-	totalPreviewPages := (totalPosts + previewsPerPage - 1) / previewsPerPage
+	tagsPerPage := op.config.TagsPerPage
+	categoriesPerPage := op.config.CategoriesPerPage
 
-	if totalPages == 0 {
-		totalPages = 1
+	totalPostPages := (totalPosts + postsPerPage - 1) / postsPerPage
+	totalPreviewPages := (totalPosts + previewsPerPage - 1) / previewsPerPage
+	totalTagPages := (len(processedPosts.Tags) + tagsPerPage - 1) / tagsPerPage
+	totalCatPages := (len(processedPosts.Categories) + categoriesPerPage - 1) / categoriesPerPage
+
+	if totalPostPages == 0 {
+		totalPostPages = 1
 	}
 	if totalPreviewPages == 0 {
 		totalPreviewPages = 1
+	}
+	if totalTagPages == 0 {
+		totalTagPages = 1
+	}
+	if totalCatPages == 0 {
+		totalCatPages = 1
 	}
 
 	var oldestPost, newestPost map[string]interface{}
@@ -175,7 +546,7 @@ func (op *OutputProcessor) saveUnifiedMetadata(sortedPosts []Post, processedPost
 		"posts": map[string]interface{}{
 			"total":      totalPosts,
 			"perPage":    postsPerPage,
-			"totalPages": totalPages,
+			"totalPages": totalPostPages,
 			"newest":     newestPost,
 			"oldest":     oldestPost,
 		},
@@ -185,12 +556,19 @@ func (op *OutputProcessor) saveUnifiedMetadata(sortedPosts []Post, processedPost
 			"totalPages": totalPreviewPages,
 		},
 		"tags": map[string]interface{}{
-			"total": len(processedPosts.Tags),
-			"stats": tagStats,
+			"total":      len(processedPosts.Tags),
+			"perPage":    tagsPerPage,
+			"totalPages": totalTagPages,
+			"stats":      tagStats,
 		},
 		"categories": map[string]interface{}{
-			"total": len(processedPosts.Categories),
-			"stats": categoryStats,
+			"total":      len(processedPosts.Categories),
+			"perPage":    categoriesPerPage,
+			"totalPages": totalCatPages,
+			"stats":      categoryStats,
+		},
+		"related": map[string]interface{}{
+			"perPage": op.config.RelatedPerPage,
 		},
 		"config": map[string]interface{}{
 			"dateFormat":         op.config.DateFormat,
@@ -209,24 +587,6 @@ func (op *OutputProcessor) saveUnifiedMetadata(sortedPosts []Post, processedPost
 	}
 
 	op.logger.Println("Saved unified metadata")
-	return nil
-}
-
-func (op *OutputProcessor) saveRelatedPosts(relatedPosts map[string][]RelatedPost) error {
-	allRelatedPath := filepath.Join(op.config.OutputDir, "public_html", "api", "related", "all.json")
-	if err := op.saveJSON(allRelatedPath, relatedPosts); err != nil {
-		return fmt.Errorf("failed to save all related posts: %w", err)
-	}
-
-	for postSlug, related := range relatedPosts {
-		relatedPath := filepath.Join(op.config.OutputDir, "public_html", "api", "related",
-			fmt.Sprintf("%s.json", postSlug))
-		if err := op.saveJSON(relatedPath, related); err != nil {
-			return fmt.Errorf("failed to save related posts for post %s: %w", postSlug, err)
-		}
-	}
-
-	op.logger.Printf("Saved related posts for %d posts", len(relatedPosts))
 	return nil
 }
 
@@ -265,47 +625,6 @@ func (op *OutputProcessor) sortPostsByDate(posts []Post) ([]Post, error) {
 	return sorted, nil
 }
 
-func (op *OutputProcessor) saveCategories(categories map[string]CategoryInfo, allPosts []Post) error {
-	allCategoriesPath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories", "all.json")
-	if err := op.saveJSON(allCategoriesPath, categories); err != nil {
-		return fmt.Errorf("failed to save all categories: %w", err)
-	}
-
-	for categoryPath, info := range categories {
-		safeFilename := strings.ReplaceAll(categoryPath, "/", "_")
-		var previews []PostPreview
-		for _, slug := range info.PostSlugs {
-			for _, post := range allPosts {
-				if post.FrontMatter.Slug == slug {
-					previews = append(previews, PostPreview{
-						FrontMatter: post.FrontMatter,
-						Excerpt:     post.Excerpt,
-						ReadingTime: post.ReadingTime,
-					})
-					break
-				}
-			}
-		}
-		sort.Slice(previews, func(i, j int) bool {
-			return previews[i].FrontMatter.Date > previews[j].FrontMatter.Date
-		})
-
-		categoryPath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories", fmt.Sprintf("%s.json", safeFilename))
-		if err := op.saveJSON(categoryPath, previews); err != nil {
-			return fmt.Errorf("failed to save category %s: %w", categoryPath, err)
-		}
-	}
-
-	tree := op.buildCategoryTree(categories)
-	treePath := filepath.Join(op.config.OutputDir, "public_html", "api", "categories", "tree.json")
-	if err := op.saveJSON(treePath, tree); err != nil {
-		return fmt.Errorf("failed to save category tree: %w", err)
-	}
-
-	op.logger.Printf("Saved %d categories", len(categories))
-	return nil
-}
-
 func (op *OutputProcessor) buildCategoryTree(categories map[string]CategoryInfo) CategoryTree {
 	var roots CategoryTree
 
@@ -339,189 +658,6 @@ func (op *OutputProcessor) buildTreeNode(path string, categories map[string]Cate
 	})
 
 	return node
-}
-
-func (op *OutputProcessor) savePaginatedPosts(posts []Post) error {
-	postsPerPage := op.config.PostsPerPage
-
-	totalPages := (len(posts) + postsPerPage - 1) / postsPerPage
-	if totalPages == 0 {
-		totalPages = 1
-	}
-
-	for page := 0; page < totalPages; page++ {
-		start := page * postsPerPage
-		end := start + postsPerPage
-		if end > len(posts) {
-			end = len(posts)
-		}
-
-		paginated := PostsResponse{
-			Posts: posts[start:end],
-			PaginationInfo: PaginationInfo{
-				Page:        page,
-				TotalPages:  totalPages,
-				TotalItems:  len(posts),
-				HasNext:     page < totalPages-1,
-				HasPrevious: page > 0,
-			},
-		}
-
-		if paginated.HasNext {
-			nextPage := page + 1
-			paginated.NextPage = &nextPage
-		}
-		if paginated.HasPrevious {
-			prevPage := page - 1
-			paginated.PrevPage = &prevPage
-		}
-
-		pagePath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "by-page",
-			fmt.Sprintf("%d.json", page))
-		if err := op.saveJSON(pagePath, paginated); err != nil {
-			return fmt.Errorf("failed to save page %d: %w", page, err)
-		}
-	}
-
-	metadata := map[string]interface{}{
-		"totalPages":         totalPages,
-		"totalPosts":         len(posts),
-		"postsPerPage":       postsPerPage,
-		"dateFormat":         op.config.DateFormat,
-		"dateFormatReadable": op.convertDateFormatToReadable(op.config.DateFormat),
-	}
-
-	metaPath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "meta.json")
-	if err := op.saveJSON(metaPath, metadata); err != nil {
-		return fmt.Errorf("failed to save pagination metadata: %w", err)
-	}
-
-	op.logger.Printf("Created %d pagination pages with %d posts per page", totalPages, postsPerPage)
-
-	return nil
-}
-
-func (op *OutputProcessor) savePosts(posts []Post) error {
-	for _, post := range posts {
-		postPath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "by-slug",
-			fmt.Sprintf("%s.json", post.FrontMatter.Slug))
-		if err := op.saveJSON(postPath, post); err != nil {
-			return fmt.Errorf("failed to save post %s: %w", post.FrontMatter.Slug, err)
-		}
-	}
-
-	allPostsPath := filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "all.json")
-	if err := op.saveJSON(allPostsPath, posts); err != nil {
-		return fmt.Errorf("failed to save all posts: %w", err)
-	}
-
-	return nil
-}
-
-func (op *OutputProcessor) savePostPreviews(posts []Post) error {
-	previews := make([]PostPreview, 0, len(posts))
-	for _, post := range posts {
-		preview := PostPreview{
-			FrontMatter: post.FrontMatter,
-			Excerpt:     post.Excerpt,
-			ReadingTime: post.ReadingTime,
-		}
-		previews = append(previews, preview)
-	}
-
-	for _, preview := range previews {
-		previewPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "by-slug",
-			fmt.Sprintf("%s.json", preview.FrontMatter.Slug))
-		if err := op.saveJSON(previewPath, preview); err != nil {
-			return fmt.Errorf("failed to save preview %s: %w", preview.FrontMatter.Slug, err)
-		}
-	}
-
-	previewsPerPage := op.config.PreviewsPerPage
-	totalPages := (len(previews) + previewsPerPage - 1) / previewsPerPage
-	if totalPages == 0 {
-		totalPages = 1
-	}
-
-	for page := 0; page < totalPages; page++ {
-		start := page * previewsPerPage
-		end := start + previewsPerPage
-		if end > len(previews) {
-			end = len(previews)
-		}
-
-		paginated := PreviewsResponse{
-			Previews: previews[start:end],
-			PaginationInfo: PaginationInfo{
-				Page:        page,
-				TotalPages:  totalPages,
-				TotalItems:  len(previews),
-				HasNext:     page < totalPages-1,
-				HasPrevious: page > 0,
-			},
-		}
-
-		if paginated.HasNext {
-			nextPage := page + 1
-			paginated.NextPage = &nextPage
-		}
-		if paginated.HasPrevious {
-			prevPage := page - 1
-			paginated.PrevPage = &prevPage
-		}
-
-		pagePath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "by-page",
-			fmt.Sprintf("%d.json", page))
-		if err := op.saveJSON(pagePath, paginated); err != nil {
-			return fmt.Errorf("failed to save preview page %d: %w", page, err)
-		}
-	}
-
-	allPreviewsPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "all.json")
-	if err := op.saveJSON(allPreviewsPath, previews); err != nil {
-		return fmt.Errorf("failed to save all previews: %w", err)
-	}
-
-	previewMeta := map[string]interface{}{
-		"totalPages":      totalPages,
-		"totalPreviews":   len(previews),
-		"previewsPerPage": previewsPerPage,
-	}
-
-	previewMetaPath := filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "meta.json")
-	if err := op.saveJSON(previewMetaPath, previewMeta); err != nil {
-		return fmt.Errorf("failed to save preview metadata: %w", err)
-	}
-
-	return nil
-}
-
-func (op *OutputProcessor) saveTags(tags map[string][]string, allPosts []Post) error {
-	allTagsPath := filepath.Join(op.config.OutputDir, "public_html", "api", "tags", "all.json")
-	if err := op.saveJSON(allTagsPath, tags); err != nil {
-		return fmt.Errorf("failed to save all tags: %w", err)
-	}
-
-	for tag, postSlugs := range tags {
-		var previews []PostPreview
-		for _, slug := range postSlugs {
-			for _, post := range allPosts {
-				if post.FrontMatter.Slug == slug {
-					previews = append(previews, PostPreview{
-						FrontMatter: post.FrontMatter,
-						Excerpt:     post.Excerpt,
-						ReadingTime: post.ReadingTime,
-					})
-					break
-				}
-			}
-		}
-		tagPath := filepath.Join(op.config.OutputDir, "public_html", "api", "tags", fmt.Sprintf("%s.json", tag))
-		if err := op.saveJSON(tagPath, previews); err != nil {
-			return fmt.Errorf("failed to save tag %s: %w", tag, err)
-		}
-	}
-	return nil
 }
 
 func (op *OutputProcessor) convertDateFormatToReadable(goFormat string) string {
@@ -586,13 +722,15 @@ func (op *OutputProcessor) saveJSON(path string, data interface{}) error {
 
 func (op *OutputProcessor) createDirectories() error {
 	directories := []string{
-		filepath.Join(op.config.OutputDir, "public_html", "api", "tags"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "by-slug"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "posts", "by-page"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "by-slug"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "previews", "by-page"),
-		filepath.Join(op.config.OutputDir, "public_html", "api", "categories"),
-		filepath.Join(op.config.OutputDir, "public_html", "api", "related"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "tags", "by-page"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "tags", "by-name"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "categories", "by-page"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "categories", "by-path"),
+		filepath.Join(op.config.OutputDir, "public_html", "api", "related", "by-slug"),
 		filepath.Join(op.config.OutputDir, "public_html", "api", "search"),
 	}
 	for _, dir := range directories {
@@ -601,29 +739,4 @@ func (op *OutputProcessor) createDirectories() error {
 		}
 	}
 	return nil
-}
-
-func (op *OutputProcessor) saveSearchIndex(posts []Post) error {
-	inverted := make(map[string][]string)
-	for _, p := range posts {
-		text := p.FrontMatter.Title + " " + strings.Join(p.FrontMatter.Tags, " ") + " " + p.Excerpt
-		toks := tokenize(text)
-		for _, t := range toks {
-			inverted[t] = append(inverted[t], p.FrontMatter.Slug)
-		}
-	}
-	for term, list := range inverted {
-		seen := make(map[string]struct{})
-		var unique []string
-		for _, slug := range list {
-			if _, ok := seen[slug]; !ok {
-				seen[slug] = struct{}{}
-				unique = append(unique, slug)
-			}
-		}
-		sort.Strings(unique)
-		inverted[term] = unique
-	}
-	path := filepath.Join(op.config.OutputDir, "public_html", "api", "search", "inverted.json")
-	return op.saveJSON(path, inverted)
 }

@@ -74,16 +74,21 @@ type PaginationInfo struct {
 	PrevPage    *int `json:"prevPage,omitempty" example:"0"`
 }
 
-// @Description Paginated response containing posts and pagination metadata
-type PostsResponse struct {
-	Posts []Post `json:"posts"`
-	PaginationInfo
+// @Description Standard paginated list envelope
+type PaginatedResponse struct {
+	Data       interface{}    `json:"data"`
+	Pagination PaginationInfo `json:"pagination"`
 }
 
-// @Description Paginated response containing post previews and pagination metadata
-type PreviewsResponse struct {
-	Previews []PostPreview `json:"previews"`
-	PaginationInfo
+// @Description Standard single-item envelope
+type SingleResponse struct {
+	Data interface{} `json:"data"`
+}
+
+// @Description Tag information
+type TagInfo struct {
+	Name      string `json:"name" example:"golang"`
+	PostCount int    `json:"postCount" example:"5"`
 }
 
 type PostLoaderInterface interface {

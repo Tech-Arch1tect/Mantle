@@ -1,10 +1,5 @@
 basePath: /api
 definitions:
-  main.CategoriesMap:
-    additionalProperties:
-      $ref: '#/definitions/main.CategoryInfo'
-    description: Mapping of category paths to category information
-    type: object
   main.CategoryInfo:
     description: Category information including hierarchy and post associations
     properties:
@@ -97,12 +92,18 @@ definitions:
     properties:
       categories:
         properties:
+          perPage:
+            example: 20
+            type: integer
           stats:
             additionalProperties:
               type: integer
             type: object
           total:
             example: 8
+            type: integer
+          totalPages:
+            example: 1
             type: integer
         type: object
       config:
@@ -144,6 +145,12 @@ definitions:
             example: 5
             type: integer
         type: object
+      related:
+        properties:
+          perPage:
+            example: 5
+            type: integer
+        type: object
       site:
         properties:
           description:
@@ -158,6 +165,9 @@ definitions:
         type: object
       tags:
         properties:
+          perPage:
+            example: 20
+            type: integer
           stats:
             additionalProperties:
               type: integer
@@ -165,7 +175,42 @@ definitions:
           total:
             example: 15
             type: integer
+          totalPages:
+            example: 1
+            type: integer
         type: object
+    type: object
+  main.PaginatedResponse:
+    description: Standard paginated list envelope
+    properties:
+      data: {}
+      pagination:
+        $ref: '#/definitions/main.PaginationInfo'
+    type: object
+  main.PaginationInfo:
+    description: Pagination information for responses
+    properties:
+      hasNext:
+        example: true
+        type: boolean
+      hasPrevious:
+        example: false
+        type: boolean
+      nextPage:
+        example: 1
+        type: integer
+      page:
+        example: 0
+        type: integer
+      prevPage:
+        example: 0
+        type: integer
+      totalItems:
+        example: 42
+        type: integer
+      totalPages:
+        example: 5
+        type: integer
     type: object
   main.Post:
     description: Complete blog post including markdown content and frontmatter
@@ -197,64 +242,6 @@ definitions:
         example: 5
         type: integer
     type: object
-  main.PostsResponse:
-    description: Paginated response containing posts and pagination metadata
-    properties:
-      hasNext:
-        example: true
-        type: boolean
-      hasPrevious:
-        example: false
-        type: boolean
-      nextPage:
-        example: 1
-        type: integer
-      page:
-        example: 0
-        type: integer
-      posts:
-        items:
-          $ref: '#/definitions/main.Post'
-        type: array
-      prevPage:
-        example: 0
-        type: integer
-      totalItems:
-        example: 42
-        type: integer
-      totalPages:
-        example: 5
-        type: integer
-    type: object
-  main.PreviewsResponse:
-    description: Paginated response containing post previews and pagination metadata
-    properties:
-      hasNext:
-        example: true
-        type: boolean
-      hasPrevious:
-        example: false
-        type: boolean
-      nextPage:
-        example: 1
-        type: integer
-      page:
-        example: 0
-        type: integer
-      prevPage:
-        example: 0
-        type: integer
-      previews:
-        items:
-          $ref: '#/definitions/main.PostPreview'
-        type: array
-      totalItems:
-        example: 42
-        type: integer
-      totalPages:
-        example: 5
-        type: integer
-    type: object
   main.RelatedPost:
     description: Related post information with similarity metrics
     properties:
@@ -274,13 +261,6 @@ definitions:
         example: Advanced Go Patterns
         type: string
     type: object
-  main.RelatedPostsMap:
-    additionalProperties:
-      items:
-        $ref: '#/definitions/main.RelatedPost'
-      type: array
-    description: Mapping of post slugs to arrays of related posts
-    type: object
   main.SearchIndex:
     additionalProperties:
       items:
@@ -289,12 +269,20 @@ definitions:
     description: Inverted search index mapping terms to post slugs for client-side
       search
     type: object
-  main.TagsMap:
-    additionalProperties:
-      items:
+  main.SingleResponse:
+    description: Standard single-item envelope
+    properties:
+      data: {}
+    type: object
+  main.TagInfo:
+    description: Tag information
+    properties:
+      name:
+        example: golang
         type: string
-      type: array
-    description: Mapping of tag names to arrays of post slugs
+      postCount:
+        example: 5
+        type: integer
     type: object
 host: localhost:8080
 info:
@@ -306,34 +294,43 @@ info:
 paths:
   /categories:
     get:
-      consumes:
-      - application/json
-      description: Get all categories or filter by specific category
+      description: Get paginated post previews for a specific category
       parameters:
-      - description: Category path (e.g., tech_tutorials)
+      - description: Category path (e.g., tutorials/go)
         in: query
         name: category
+        required: true
         type: string
+      - default: 0
+        description: Page number (0-indexed)
+        in: query
+        name: page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: Previews for a specific category (when ?category=...)
+          description: Paginated previews for category
           schema:
-            items:
-              $ref: '#/definitions/main.PostPreview'
-            type: array
+            allOf:
+            - $ref: '#/definitions/main.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/main.PostPreview'
+                  type: array
+                pagination:
+                  $ref: '#/definitions/main.PaginationInfo'
+              type: object
         "404":
           description: Category not found
           schema:
             $ref: '#/definitions/main.ErrorResponse'
-      summary: Get all categories
+      summary: Get posts by category
       tags:
       - categories
   /categories/tree.json:
     get:
-      consumes:
-      - application/json
       description: Get hierarchical category tree structure
       produces:
       - application/json
@@ -341,17 +338,20 @@ paths:
         "200":
           description: Hierarchical category tree
           schema:
-            description: Hierarchical category tree structure
-            items:
-              $ref: '#/definitions/main.CategoryTreeNode'
-            type: array
+            allOf:
+            - $ref: '#/definitions/main.SingleResponse'
+            - properties:
+                data:
+                  description: Hierarchical category tree structure
+                  items:
+                    $ref: '#/definitions/main.CategoryTreeNode'
+                  type: array
+              type: object
       summary: Get category tree
       tags:
       - categories
   /meta.json:
     get:
-      consumes:
-      - application/json
       description: Get unified API metadata including counts, pagination info, and
         configuration
       produces:
@@ -366,11 +366,10 @@ paths:
       - metadata
   /posts/by-page:
     get:
-      consumes:
-      - application/json
       description: Get paginated posts with optional page parameter
       parameters:
-      - description: Page number (0-indexed)
+      - default: 0
+        description: Page number (0-indexed)
         in: query
         name: page
         type: integer
@@ -380,7 +379,16 @@ paths:
         "200":
           description: Paginated posts
           schema:
-            $ref: '#/definitions/main.PostsResponse'
+            allOf:
+            - $ref: '#/definitions/main.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/main.Post'
+                  type: array
+                pagination:
+                  $ref: '#/definitions/main.PaginationInfo'
+              type: object
         "404":
           description: Page not found
           schema:
@@ -390,8 +398,6 @@ paths:
       - posts
   /posts/by-slug:
     get:
-      consumes:
-      - application/json
       description: Get a specific post by its slug
       parameters:
       - description: Post slug
@@ -405,7 +411,12 @@ paths:
         "200":
           description: Single post
           schema:
-            $ref: '#/definitions/main.Post'
+            allOf:
+            - $ref: '#/definitions/main.SingleResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/main.Post'
+              type: object
         "400":
           description: Missing slug parameter
           schema:
@@ -419,11 +430,10 @@ paths:
       - posts
   /previews/by-page:
     get:
-      consumes:
-      - application/json
       description: Get paginated post previews with optional page parameter
       parameters:
-      - description: Page number (0-indexed)
+      - default: 0
+        description: Page number (0-indexed)
         in: query
         name: page
         type: integer
@@ -433,7 +443,16 @@ paths:
         "200":
           description: Paginated previews
           schema:
-            $ref: '#/definitions/main.PreviewsResponse'
+            allOf:
+            - $ref: '#/definitions/main.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/main.PostPreview'
+                  type: array
+                pagination:
+                  $ref: '#/definitions/main.PaginationInfo'
+              type: object
         "404":
           description: Page not found
           schema:
@@ -443,8 +462,6 @@ paths:
       - previews
   /previews/by-slug:
     get:
-      consumes:
-      - application/json
       description: Get a specific post preview by its slug
       parameters:
       - description: Post slug
@@ -458,7 +475,12 @@ paths:
         "200":
           description: Single preview
           schema:
-            $ref: '#/definitions/main.PostPreview'
+            allOf:
+            - $ref: '#/definitions/main.SingleResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/main.PostPreview'
+              type: object
         "400":
           description: Missing slug parameter
           schema:
@@ -472,23 +494,33 @@ paths:
       - previews
   /related:
     get:
-      consumes:
-      - application/json
-      description: Get related posts for all posts or for a specific post
+      description: Get related posts for a specific post by slug
       parameters:
       - description: Post slug
         in: query
         name: slug
+        required: true
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: Related posts for specific post when slug provided
+          description: Related posts
           schema:
-            items:
-              $ref: '#/definitions/main.RelatedPost'
-            type: array
+            allOf:
+            - $ref: '#/definitions/main.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/main.RelatedPost'
+                  type: array
+                pagination:
+                  $ref: '#/definitions/main.PaginationInfo'
+              type: object
+        "400":
+          description: Missing slug parameter
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
         "404":
           description: Post not found
           schema:
@@ -496,45 +528,59 @@ paths:
       summary: Get related posts
       tags:
       - related
-  /search/inverted.json:
+  /search/index.json:
     get:
-      consumes:
-      - application/json
       description: Get inverted search index for client-side search
       produces:
       - application/json
       responses:
         "200":
-          description: Inverted search index mapping terms to post slugs
+          description: Search index
           schema:
-            $ref: '#/definitions/main.SearchIndex'
+            allOf:
+            - $ref: '#/definitions/main.SingleResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/main.SearchIndex'
+              type: object
       summary: Get search index
       tags:
       - search
   /tags:
     get:
-      consumes:
-      - application/json
-      description: Get all tags or filter posts by specific tag
+      description: Get paginated post previews for a specific tag
       parameters:
       - description: Tag name
         in: query
         name: tag
+        required: true
         type: string
+      - default: 0
+        description: Page number (0-indexed)
+        in: query
+        name: page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: Previews for specific tag (when ?tag=...)
+          description: Paginated previews for tag
           schema:
-            items:
-              $ref: '#/definitions/main.PostPreview'
-            type: array
+            allOf:
+            - $ref: '#/definitions/main.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/main.PostPreview'
+                  type: array
+                pagination:
+                  $ref: '#/definitions/main.PaginationInfo'
+              type: object
         "404":
           description: Tag not found
           schema:
             $ref: '#/definitions/main.ErrorResponse'
-      summary: Get all tags
+      summary: Get posts by tag
       tags:
       - tags
 swagger: "2.0"

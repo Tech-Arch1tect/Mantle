@@ -43,7 +43,7 @@ func main() {
 	}
 	logger.Printf("Loaded %d post(s)", len(posts))
 
-	processor := NewPostProcessor()
+	processor := NewPostProcessor(cfg.RelatedPerPage)
 	processedPosts := processor.Process(posts)
 
 	outputProcessor := NewOutputProcessor(cfg)

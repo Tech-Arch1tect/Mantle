@@ -36,22 +36,15 @@ type ProcessedPosts struct {
 	RelatedPosts map[string][]RelatedPost `json:"relatedPosts"`
 }
 
-// @Description Mapping of tag names to arrays of post slugs
-type TagsMap map[string][]string
-
-// @Description Mapping of category paths to category information
-type CategoriesMap map[string]CategoryInfo
-
-// @Description Mapping of post slugs to arrays of related posts
-type RelatedPostsMap map[string][]RelatedPost
-
 // @Description Inverted search index mapping terms to post slugs for client-side search
 type SearchIndex map[string][]string
 
-type DefaultPostProcessor struct{}
+type DefaultPostProcessor struct {
+	relatedPerPage int
+}
 
-func NewPostProcessor() PostProcessor {
-	return &DefaultPostProcessor{}
+func NewPostProcessor(relatedPerPage int) PostProcessor {
+	return &DefaultPostProcessor{relatedPerPage: relatedPerPage}
 }
 
 func (pp *DefaultPostProcessor) Process(posts []Post) ProcessedPosts {
@@ -108,8 +101,8 @@ func (pp *DefaultPostProcessor) buildRelatedPosts(posts []Post, relatedPosts map
 			return related[i].Date > related[j].Date
 		})
 
-		if len(related) > 5 {
-			related = related[:5]
+		if len(related) > pp.relatedPerPage {
+			related = related[:pp.relatedPerPage]
 		}
 
 		relatedPosts[post.FrontMatter.Slug] = related

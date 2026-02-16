@@ -19,10 +19,9 @@ import (
 // @Summary Get paginated posts
 // @Description Get paginated posts with optional page parameter
 // @Tags posts
-// @Accept json
 // @Produce json
-// @Param page query int false "Page number (0-indexed)"
-// @Success 200 {object} PostsResponse "Paginated posts"
+// @Param page query int false "Page number (0-indexed)" default(0)
+// @Success 200 {object} PaginatedResponse{data=[]Post,pagination=PaginationInfo} "Paginated posts"
 // @Failure 404 {object} ErrorResponse "Page not found"
 // @Router /posts/by-page [get]
 func GetPostsByPage() {}
@@ -30,10 +29,9 @@ func GetPostsByPage() {}
 // @Summary Get post by slug
 // @Description Get a specific post by its slug
 // @Tags posts
-// @Accept json
 // @Produce json
 // @Param slug query string true "Post slug"
-// @Success 200 {object} Post "Single post"
+// @Success 200 {object} SingleResponse{data=Post} "Single post"
 // @Failure 400 {object} ErrorResponse "Missing slug parameter"
 // @Failure 404 {object} ErrorResponse "Post not found"
 // @Router /posts/by-slug [get]
@@ -42,10 +40,9 @@ func GetPostBySlug() {}
 // @Summary Get paginated previews
 // @Description Get paginated post previews with optional page parameter
 // @Tags previews
-// @Accept json
 // @Produce json
-// @Param page query int false "Page number (0-indexed)"
-// @Success 200 {object} PreviewsResponse "Paginated previews"
+// @Param page query int false "Page number (0-indexed)" default(0)
+// @Success 200 {object} PaginatedResponse{data=[]PostPreview,pagination=PaginationInfo} "Paginated previews"
 // @Failure 404 {object} ErrorResponse "Page not found"
 // @Router /previews/by-page [get]
 func GetPreviewsByPage() {}
@@ -53,56 +50,69 @@ func GetPreviewsByPage() {}
 // @Summary Get preview by slug
 // @Description Get a specific post preview by its slug
 // @Tags previews
-// @Accept json
 // @Produce json
 // @Param slug query string true "Post slug"
-// @Success 200 {object} PostPreview "Single preview"
+// @Success 200 {object} SingleResponse{data=PostPreview} "Single preview"
 // @Failure 400 {object} ErrorResponse "Missing slug parameter"
 // @Failure 404 {object} ErrorResponse "Preview not found"
 // @Router /previews/by-slug [get]
 func GetPreviewBySlug() {}
 
-// @Summary Get all tags
-// @Description Get all tags or filter posts by specific tag
+// @Summary Get paginated tag list
+// @Description Get all tags with post counts, paginated
 // @Tags tags
-// @Accept json
 // @Produce json
-// @Param tag query string false "Tag name"
-// @Success 200 {object} TagsMap "All tags (used for /api/tags)"
-// @Success 200 {array} PostPreview "Previews for specific tag (when ?tag=...)"
+// @Param page query int false "Page number (0-indexed)" default(0)
+// @Success 200 {object} PaginatedResponse{data=[]TagInfo,pagination=PaginationInfo} "Paginated tag list"
+// @Router /tags [get]
+func GetTagList() {}
+
+// @Summary Get posts by tag
+// @Description Get paginated post previews for a specific tag
+// @Tags tags
+// @Produce json
+// @Param tag query string true "Tag name"
+// @Param page query int false "Page number (0-indexed)" default(0)
+// @Success 200 {object} PaginatedResponse{data=[]PostPreview,pagination=PaginationInfo} "Paginated previews for tag"
 // @Failure 404 {object} ErrorResponse "Tag not found"
 // @Router /tags [get]
-func GetTags() {}
+func GetPostsByTag() {}
 
-// @Summary Get all categories
-// @Description Get all categories or filter by specific category
+// @Summary Get paginated category list
+// @Description Get all categories with post counts, paginated
 // @Tags categories
-// @Accept json
 // @Produce json
-// @Param category query string false "Category path (e.g., tech_tutorials)"
-// @Success 200 {object} CategoriesMap "All categories (used for /api/categories)"
-// @Success 200 {array} PostPreview "Previews for a specific category (when ?category=...)"
+// @Param page query int false "Page number (0-indexed)" default(0)
+// @Success 200 {object} PaginatedResponse{data=[]CategoryInfo,pagination=PaginationInfo} "Paginated category list"
+// @Router /categories [get]
+func GetCategoryList() {}
+
+// @Summary Get posts by category
+// @Description Get paginated post previews for a specific category
+// @Tags categories
+// @Produce json
+// @Param category query string true "Category path (e.g., tutorials/go)"
+// @Param page query int false "Page number (0-indexed)" default(0)
+// @Success 200 {object} PaginatedResponse{data=[]PostPreview,pagination=PaginationInfo} "Paginated previews for category"
 // @Failure 404 {object} ErrorResponse "Category not found"
 // @Router /categories [get]
-func GetCategories() {}
+func GetPostsByCategory() {}
 
 // @Summary Get category tree
 // @Description Get hierarchical category tree structure
 // @Tags categories
-// @Accept json
 // @Produce json
-// @Success 200 {object} CategoryTree "Hierarchical category tree"
+// @Success 200 {object} SingleResponse{data=CategoryTree} "Hierarchical category tree"
 // @Router /categories/tree.json [get]
 func GetCategoryTree() {}
 
 // @Summary Get related posts
-// @Description Get related posts for all posts or for a specific post
+// @Description Get related posts for a specific post by slug
 // @Tags related
-// @Accept json
 // @Produce json
-// @Param slug query string false "Post slug"
-// @Success 200 {object} RelatedPostsMap "All related posts mapping"
-// @Success 200 {array} RelatedPost "Related posts for specific post when slug provided"
+// @Param slug query string true "Post slug"
+// @Success 200 {object} PaginatedResponse{data=[]RelatedPost,pagination=PaginationInfo} "Related posts"
+// @Failure 400 {object} ErrorResponse "Missing slug parameter"
 // @Failure 404 {object} ErrorResponse "Post not found"
 // @Router /related [get]
 func GetRelated() {}
@@ -110,16 +120,14 @@ func GetRelated() {}
 // @Summary Get search index
 // @Description Get inverted search index for client-side search
 // @Tags search
-// @Accept json
 // @Produce json
-// @Success 200 {object} SearchIndex "Inverted search index mapping terms to post slugs"
-// @Router /search/inverted.json [get]
+// @Success 200 {object} SingleResponse{data=SearchIndex} "Search index"
+// @Router /search/index.json [get]
 func GetSearchIndex() {}
 
 // @Summary Get API metadata
 // @Description Get unified API metadata including counts, pagination info, and configuration
 // @Tags metadata
-// @Accept json
 // @Produce json
 // @Success 200 {object} MetadataResponse "API metadata"
 // @Router /meta.json [get]

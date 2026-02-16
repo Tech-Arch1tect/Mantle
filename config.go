@@ -17,6 +17,9 @@ type Config struct {
 	CorsAllowHeaders      string `env:"CORS_ALLOW_HEADERS"`
 	CorsMaxAge            int    `env:"CORS_MAX_AGE"`
 	AverageWordsPerMinute int    `env:"AVERAGE_WORDS_PER_MINUTE"`
+	TagsPerPage           int    `env:"TAGS_PER_PAGE"`
+	CategoriesPerPage     int    `env:"CATEGORIES_PER_PAGE"`
+	RelatedPerPage        int    `env:"RELATED_PER_PAGE"`
 	GenerateSwagger       bool   `env:"GENERATE_SWAGGER"`
 	SiteName              string `env:"SITE_NAME"`
 	SiteDescription       string `env:"SITE_DESCRIPTION"`
@@ -35,6 +38,9 @@ func NewConfig() *Config {
 		CorsAllowHeaders:      "Origin, X-Requested-With, Content-Type, Accept",
 		CorsMaxAge:            86400,
 		AverageWordsPerMinute: 200,
+		TagsPerPage:           20,
+		CategoriesPerPage:     20,
+		RelatedPerPage:        5,
 		GenerateSwagger:       true,
 	}
 }
@@ -54,6 +60,15 @@ func (c *Config) Load() error {
 	}
 	if c.CorsMaxAge < 0 {
 		return fmt.Errorf("CORS max age must be non-negative, got %d", c.CorsMaxAge)
+	}
+	if c.TagsPerPage < 1 {
+		return fmt.Errorf("tags per page must be at least 1, got %d", c.TagsPerPage)
+	}
+	if c.CategoriesPerPage < 1 {
+		return fmt.Errorf("categories per page must be at least 1, got %d", c.CategoriesPerPage)
+	}
+	if c.RelatedPerPage < 1 {
+		return fmt.Errorf("related per page must be at least 1, got %d", c.RelatedPerPage)
 	}
 
 	return nil
@@ -90,6 +105,15 @@ func (c *Config) SetDefaults() {
 	if c.AverageWordsPerMinute == 0 {
 		c.AverageWordsPerMinute = 200
 	}
+	if c.TagsPerPage == 0 {
+		c.TagsPerPage = 20
+	}
+	if c.CategoriesPerPage == 0 {
+		c.CategoriesPerPage = 20
+	}
+	if c.RelatedPerPage == 0 {
+		c.RelatedPerPage = 5
+	}
 	if c.SiteName == "" {
 		c.SiteName = "My Site"
 	}
@@ -102,6 +126,6 @@ func (c *Config) SetDefaults() {
 }
 
 func (c *Config) String() string {
-	return fmt.Sprintf("Config{ContentDir: %q, OutputDir: %q, PostsPerPage: %d, PreviewsPerPage: %d, DateFormat: %q, CorsAllowOrigin: %q, CorsAllowMethods: %q, CorsAllowHeaders: %q, CorsMaxAge: %d, GenerateSwagger: %t}",
-		c.ContentDir, c.OutputDir, c.PostsPerPage, c.PreviewsPerPage, c.DateFormat, c.CorsAllowOrigin, c.CorsAllowMethods, c.CorsAllowHeaders, c.CorsMaxAge, c.GenerateSwagger)
+	return fmt.Sprintf("Config{ContentDir: %q, OutputDir: %q, PostsPerPage: %d, PreviewsPerPage: %d, TagsPerPage: %d, CategoriesPerPage: %d, RelatedPerPage: %d, DateFormat: %q, CorsAllowOrigin: %q, CorsAllowMethods: %q, CorsAllowHeaders: %q, CorsMaxAge: %d, GenerateSwagger: %t}",
+		c.ContentDir, c.OutputDir, c.PostsPerPage, c.PreviewsPerPage, c.TagsPerPage, c.CategoriesPerPage, c.RelatedPerPage, c.DateFormat, c.CorsAllowOrigin, c.CorsAllowMethods, c.CorsAllowHeaders, c.CorsMaxAge, c.GenerateSwagger)
 }

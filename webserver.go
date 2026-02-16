@@ -110,85 +110,75 @@ server {
     listen 80;
     server_name localhost;
     root /var/www/html;
-        
+
     include json.conf;
     include security.conf;
     include compression.conf;
-    
+
     location / {
         return 404;
     }
-    
+
     location = /api/posts/by-page {
         include cors.conf;
-        
-        if ($page_param != "") {
-            rewrite ^ /api/posts/by-page/$page_param.json last;
-        }
-        
-        try_files /api/posts/by-page/0.json =404;
+        rewrite ^ /api/posts/by-page/$page_param.json last;
     }
-    
+
     location = /api/posts/by-slug {
         include cors.conf;
-        
+
         if ($slug_param = "") {
             return 400;
         }
-        
+
         rewrite ^ /api/posts/by-slug/$slug_param.json last;
     }
-    
+
     location = /api/previews/by-page {
         include cors.conf;
-        
-        if ($page_param != "") {
-            rewrite ^ /api/previews/by-page/$page_param.json last;
-        }
-        
-        try_files /api/previews/by-page/0.json =404;
+        rewrite ^ /api/previews/by-page/$page_param.json last;
     }
-    
+
     location = /api/previews/by-slug {
         include cors.conf;
-        
+
         if ($slug_param = "") {
             return 400;
         }
-        
+
         rewrite ^ /api/previews/by-slug/$slug_param.json last;
     }
-    
+
     location = /api/tags {
         include cors.conf;
-        
-        if ($tag_resource != "") {
-            rewrite ^ /api/tags/$tag_resource last;
+
+        if ($tag_param != "") {
+            rewrite ^ /api/tags/by-name/$tag_param/by-page/$page_param.json last;
         }
-        
-        try_files /api/tags/all.json =404;
+
+        rewrite ^ /api/tags/by-page/$page_param.json last;
     }
-    
+
     location = /api/categories {
         include cors.conf;
-        
-        if ($category_resource != "") {
-            rewrite ^ /api/categories/$category_resource last;
+
+        if ($category_param != "") {
+            rewrite ^ /api/categories/by-path/$category_param/by-page/$page_param.json last;
         }
-        
-        try_files /api/categories/all.json =404;
+
+        rewrite ^ /api/categories/by-page/$page_param.json last;
     }
-    
+
     location = /api/related {
         include cors.conf;
-        
-        if ($related_resource != "") {
-            rewrite ^ /api/related/$related_resource last;
+
+        if ($slug_param = "") {
+            return 400;
         }
-        
-        try_files /api/related/all.json =404;
+
+        rewrite ^ /api/related/by-slug/$slug_param.json last;
     }
-    
+
     location /api/ {
         include cors.conf;
         try_files $uri $uri/ =404;
@@ -201,12 +191,12 @@ server {
 }
 
 func (wsg *WebServerGenerator) generateMapsConfig(nginxDir string) error {
-	mapsConf := `# Map query parameters to resource files
+	mapsConf := `# Map query parameters to resource paths
 
-# Page parameter mapping - ?page=2 -> 2
+# Page parameter mapping - ?page=2 -> 2, default to 0
 map $arg_page $page_param {
     ~^(\d+)$    $1;
-    default     "";
+    default     "0";
 }
 
 # Slug parameter mapping - ?slug=my-post -> my-post
@@ -215,22 +205,16 @@ map $arg_slug $slug_param {
     default            "";
 }
 
-# Tags mapping - ?tag=golang -> golang.json
-map $arg_tag $tag_resource {
-    ~^(.+)$     $1.json;
-    default     "";
+# Tag parameter mapping - ?tag=golang -> golang
+map $arg_tag $tag_param {
+    ~^([a-zA-Z0-9_-]+)$    $1;
+    default                 "";
 }
 
-# Categories mapping - ?category=tech_tutorials -> tech_tutorials.json
-map $arg_category $category_resource {
-    ~^(.+)$     $1.json;
-    default     "";
-}
-
-# Related posts mapping - ?slug=my-post -> my-post.json
-map $arg_slug $related_resource {
-    ~^([^/]+)$  $1.json;
-    default     "";
+# Category parameter mapping - ?category=tutorials/go -> tutorials/go
+map $arg_category $category_param {
+    ~^([a-zA-Z0-9_./-]+)$    $1;
+    default                   "";
 }
 `
 
